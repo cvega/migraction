@@ -1,0 +1,30 @@
+name: Migrate Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Repo to migrate packages'
+        required: true
+        type: string
+
+jobs:
+  migrate-packages:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install gh migrate-packages extension
+      run: gh extension install mona-actions/gh-migrate-packages
+      env:
+        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+    
+    - name: Sync packages
+      run: |
+        gh migrate-packages sync --help
+        # gh migrate-packages sync \
+        #   --target-organization ${{ vars.TARGET_ORGANIZATION }} \
+        #   --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
+      env:
+        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}

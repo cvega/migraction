@@ -1,0 +1,32 @@
+name: Migrate LFS Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Repo to LFS migrate'
+        required: true
+        type: string
+
+jobs:
+  migrate-lfs:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install gh migrate-lfs extension
+      run: gh extension install mona-actions/gh-migrate-lfs
+      env:
+        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+    
+    - name: Sync LFS data
+      run: |
+        gh migrate-lfs sync --help
+        # gh migrate-lfs sync \
+        #   --file ${{ inputs.repository }} \
+        #   --target-organization ${{ vars.TARGET_ORGANIZATION }} \
+        #   --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
+        #   --work-dir lfs/
+      env:
+        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
