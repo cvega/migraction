@@ -3,8 +3,8 @@ name: Migrate Releases
 on:
   workflow_dispatch:
     inputs:
-      repository:
-        description: 'Repo to migrate releases'
+      releases_path:
+        description: 'Path to the releases directory'
         required: true
         type: string
 
