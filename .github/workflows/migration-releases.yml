@@ -23,7 +23,7 @@ jobs:
     - name: Sync releases 
       run: |
         gh migrate-releases sync \
-          --repository ${{ inputs.repository }} \
+          --repository ${{ inputs.releases_path }} \
           --source-organization ${{ vars.SOURCE_ORGANIZATION }} \
           --source-token ${{ secrets.SOURCE_TOKEN }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \

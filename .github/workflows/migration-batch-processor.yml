@@ -232,11 +232,14 @@ jobs:
       - name: Check if repo has releases
         id: releases-check
         run: |
-          DIR="/opt/migration/releases/${{ matrix.repository }}"
+          REPO_PATH=$(echo "${{ matrix.repository }}" | sed -E 's#https?://[^/]+/##')
+          DIR="/opt/migration/releases/$REPO_PATH"
           if [ -d "$DIR" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
+            echo "releases_path=$DIR" >> $GITHUB_OUTPUT
           else
             echo "found=false" >> $GITHUB_OUTPUT
+            echo "releases_path=$DIR" >> $GITHUB_OUTPUT
           fi
 
       - name: Dispatch releases workflow
@@ -247,8 +250,7 @@ jobs:
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: |
             {
-              "repository": "${{ matrix.repository }}",
-              "releases_path": "/opt/migration/releases/${{ matrix.repository }}"
+              "releases_path": "${{ steps.releases-check.outputs.releases_path }}"
             }
 
       - name: Reclaim mannequins
