@@ -172,6 +172,7 @@ jobs:
               $AwsRegionArg $AwsRegionValue `
               $AwsBucketArg $AwsBucketValue `
               ${{ steps.lock-flag.outputs.result }} `
+              --skip-releases `
               --queue-only
             }
             
