@@ -7,7 +7,7 @@ on:
 jobs:
   process-batch:
     name: Batch ${{ github.event.client_payload.batch.batchNumber }} - ${{ matrix.repository }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         repository: ${{ github.event.client_payload.batch.repositories }}
@@ -232,8 +232,12 @@ jobs:
       - name: Check if repo has releases
         id: releases-check
         run: |
-          OUTPUT=$(node .github/scripts/check-csv-repo.cjs releases.csv "${{ matrix.repository }}")
-          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          DIR="/opt/migration/releases/${{ matrix.repository }}"
+          if [ -d "$DIR" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Dispatch releases workflow
         if: steps.releases-check.outputs.found == 'true'
@@ -243,7 +247,8 @@ jobs:
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: |
             {
-              "repository": "${{ matrix.repository }}"
+              "repository": "${{ matrix.repository }}",
+              "releases_path": "/opt/migration/releases/${{ matrix.repository }}"
             }
 
       - name: Reclaim mannequins
