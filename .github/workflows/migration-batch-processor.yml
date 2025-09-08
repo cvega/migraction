@@ -250,7 +250,7 @@ jobs:
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: |
             {
-              "releases_path": "${{ steps.releases-check.outputs.repo }}"
+              "repo": "${{ steps.releases-check.outputs.repo }}"
             }
 
       - name: Reclaim mannequins
