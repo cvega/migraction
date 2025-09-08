@@ -3,8 +3,8 @@ name: Migrate Releases
 on:
   workflow_dispatch:
     inputs:
-      releases_path:
-        description: 'Path to the releases directory'
+      repo:
+        description: 'Repository to migrate releases from'
         required: true
         type: string
 
@@ -23,10 +23,8 @@ jobs:
     - name: Sync releases 
       run: |
         gh migrate-releases sync \
-          --repository ${{ inputs.releases_path }} \
+          --repository ${{ inputs.repo }} \
           --source-organization ${{ vars.SOURCE_ORGANIZATION }} \
-          --source-token ${{ secrets.SOURCE_TOKEN }} \
+          --source-token ${{ secrets.SOURCE_ADMIN_TOKEN }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
           --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
-      env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
