@@ -28,6 +28,7 @@ jobs:
       TOTAL_BATCHES: ${{ github.event.client_payload.batch.totalBatches }}
       ORCHESTRATOR_RUN_ID: ${{ github.event.client_payload.orchestrator_run_id }}
       INSTALL_PREREQS: ${{ github.event.client_payload.batch.installPrereqs || 'false' }}
+      REPOSITORY: ${{ matrix.repository }}
 
     steps:
       - name: Check out repository
@@ -59,7 +60,7 @@ jobs:
         run: |
           ARGS=(
             ".github/scripts/gei-migrate-repo.js"
-            "--repository" "${{ matrix.repository }}"
+            "--repository" "$REPOSITORY"
             "--target-org" "$TARGET_ORG"
             "--visibility" "$VISIBILITY"
             "--migration-type" "$MIGRATION_TYPE"
