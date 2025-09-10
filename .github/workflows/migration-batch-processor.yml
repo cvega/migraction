@@ -68,7 +68,7 @@ jobs:
           )
           
           # Add lock flag for production migrations
-          if [[ "${{ env.MIGRATION_TYPE }}" == "production" ]]; then
+          if [[ "$MIGRATION_TYPE" == "production" ]]; then
             ARGS+=("--lock-source-repo")
           fi
           
