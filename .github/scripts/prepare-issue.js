@@ -58,8 +58,8 @@ module.exports = async ({github, context}) => {
 
     **${numberOfRepositories} repositories** have been parsed from your issue body
 
-    The **target organization** is set to be: **\`${ process.env.TARGET_ORG }\`**
-    The **target repository visibility** is set to be: **\`${ visibility }\`**
+    The **target organization** is set to be: **\`${process.env.TARGET_ORG}\`**
+    The **target repository visibility** is set to be: **\`${visibility}\`**
 
     <details>
         <summary><b>Troubleshooting</b></summary>
@@ -75,18 +75,18 @@ module.exports = async ({github, context}) => {
 
     We recommend to do a "dry-run" migration first which **will not lock your source repository** and therefore does not block your users from continuing to work on the repository.
 
-    \`\`\`
+    \\\`\\\`\\\`
     /run-dry-run-migration
-    \`\`\`
+    \\\`\\\`\\\`
 
     **Production**
 
     After you have verified your "dry-run" migration and after you have announced the production migration to your users, create a comment with the following command to start the production migration. It **will lock your source repository** and make it unaccessible for your users.
 
-    \`\`\`
+    \\\`\\\`\\\`
     /run-production-migration
-    \`\`\`
-    `
+    \\\`\\\`\\\`
+    `;
 
     // For repositories migrating with GEI, inform about batching
     const labelsResponse = await github.rest.issues.listLabelsOnIssue({
