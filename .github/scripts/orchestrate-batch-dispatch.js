@@ -121,7 +121,7 @@ module.exports = async ({github, context}) => {
         const response = await fetch(`https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/dispatches`, {
             method: 'POST',
             headers: {
-                'Authorization': `token ${{ secrets.TARGET_ADMIN_TOKEN }}`,
+                'Authorization': `token ${process.env.TARGET_ADMIN_TOKEN}`,
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json',
                 'User-Agent': 'GitHub Actions'

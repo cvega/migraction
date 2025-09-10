@@ -42,6 +42,7 @@ jobs:
           REPOSITORIES: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
           VISIBILITY: ${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}
           TARGET_ORG: ${{ vars.TARGET_ORGANIZATION }}
+          TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
 
       - name: Post failure message
         if: ${{ failure() }}
