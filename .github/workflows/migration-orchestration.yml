@@ -69,8 +69,8 @@ jobs:
           BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
         with:
           script: |
-            const script = require('./.github/scripts/orchestrate-batch-dispatch.js');
-            return await script({github, context});
+            const script = require('./.github/scripts/create-migration-batches.js');
+            return await script({context, core});
             
       - name: Start issue comment
         uses: actions/github-script@v8
@@ -93,14 +93,14 @@ jobs:
     timeout-minutes: 50400
     steps:
       - name: Process batches sequentially
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           BATCHES: ${{ needs.prepare.outputs.batches }}
         with:
           github-token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           script: |
             const script = require('./.github/scripts/orchestrate-batch-dispatch.js');
-            return await script({github, context, core, env});
+            return await script({github, context});
 
   final-report:
     name: Final Report
@@ -113,4 +113,4 @@ jobs:
         with:
           script: |
             const script = require('./.github/scripts/final-report.js');
-            return await script({github, context, core, env});
+            return await script({github, context});
