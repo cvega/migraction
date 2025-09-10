@@ -317,6 +317,9 @@ jobs:
     needs: process-batch
     if: always()
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download batch migration statuses
         uses: actions/download-artifact@v4
         with:
