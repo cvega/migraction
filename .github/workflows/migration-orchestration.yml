@@ -64,13 +64,18 @@ jobs:
       - name: Create batches
         id: create-batches
         uses: actions/github-script@v8
-        env:
-          REPOS: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
-          BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
         with:
           script: |
             const script = require('./.github/scripts/create-migration-batches.js');
             return await script({context, core});
+        env:
+          REPOS: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
+          BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
+          MIGRATION_ID: ${{ steps.generate-id.outputs.id }}
+          MIGRATION_TYPE: ${{ inputs.MIGRATION_TYPE }}
+          TARGET_ORG: ${{ inputs.TARGET_ORGANIZATION }}
+          VISIBILITY: ${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}
+          INSTALL_PREREQS: ${{ inputs.INSTALL_PREREQS }}
             
       - name: Start issue comment
         uses: actions/github-script@v8

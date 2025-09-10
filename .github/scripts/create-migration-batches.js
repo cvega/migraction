@@ -29,17 +29,17 @@ module.exports = async ({context, core}) => {
         const batchData = {
             batchNumber: i + 1,
             repositories: batch,
-            migrationId: '${{ steps.generate-id.outputs.id }}',
+            migrationId: process.env.MIGRATION_ID,
             issueNumber: context.issue.number,
-            migrationType: '${{ inputs.MIGRATION_TYPE }}',
-            targetOrganization: '${{ inputs.TARGET_ORGANIZATION }}',
-            targetRepositoryVisibility: '${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}',
-            installPrereqs: '${{ inputs.INSTALL_PREREQS }}',
-            batchId: `batch-${i + 1}-${Date.now()}`, // Unique batch ID
+            migrationType: process.env.MIGRATION_TYPE,
+            targetOrganization: process.env.TARGET_ORG,
+            targetRepositoryVisibility: process.env.VISIBILITY,
+            installPrereqs: process.env.INSTALL_PREREQS,
+            batchId: `batch-${i + 1}-${Date.now()}`,
             totalBatches: batchCount,
             totalRepos: repos.length
         };
-        
+                
         batches.push(batchData);
     }
 
