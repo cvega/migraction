@@ -1,4 +1,4 @@
-module.exports = ({github, context, core, env}) => {
+module.exports = async ({github, context, core, env}) => {
     // if process.env.VISIBILITY is 'None', set it to 'private'
     let visibility
     if (process.env.VISIBILITY == 'None') {
