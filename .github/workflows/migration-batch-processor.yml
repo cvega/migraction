@@ -1,4 +1,167 @@
+# name: Migration Batch Processor
+
+# on:
+#   repository_dispatch:
+#     types: [migration-batch]
+
+# jobs:
+#   process-batch:
+#     name: Batch ${{ github.event.client_payload.batch.batchNumber }} - ${{ matrix.repository }}
+#     runs-on: self-hosted
+#     strategy:
+#       matrix:
+#         repository: ${{ github.event.client_payload.batch.repositories }}
+#       fail-fast: false
+#       max-parallel: 10
+#     timeout-minutes: 50400
+
+#     steps:
+#       - name: Check out repository
+#         uses: actions/checkout@v4
+
+#       - name: Install common dependencies
+#         if: ${{ github.event.client_payload.batch.installPrereqs == 'true' || github.event.client_payload.batch.installPrereqs == '' }}
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install --yes git unzip curl wget apt-transport-https software-properties-common
+
+#       - name: Install GitHub Enterprise Importer
+#         if: ${{ github.event.client_payload.batch.installPrereqs == 'true' || github.event.client_payload.batch.installPrereqs == '' }}
+#         run: |
+#           if [ -z "$(command -v gei)" ]; then
+#             wget https://github.com/github/gh-gei/releases/latest/download/gei-linux-amd64
+#             sudo install --owner root --group root --mode 755 gei-linux-amd64 /usr/local/bin/gei
+#           fi
+#           gei --version
+
+#       - if: runner.debug
+#         name: GEI version number
+#         run: gei --version
+
+#       - name: Create lock flag based on migration type
+#         uses: actions/github-script@v7
+#         id: lock-flag
+#         with:
+#           result-encoding: string
+#           script: |
+#             const migrationType = '${{ github.event.client_payload.batch.migrationType }}';
+#             return migrationType === 'production' ? '--lock-source-repo' : '';
+
+#       - name: Download repos visibility file
+#         uses: actions/download-artifact@v4
+#         if: github.event.client_payload.batch.targetRepositoryVisibility == 'Mirror'
+#         continue-on-error: true
+#         with:
+#           name: source-repos-visibility.json
+#           github-token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+#           run-id: ${{ github.event.client_payload.orchestrator_run_id }}
+
+#       - name: Migrate repository
+#         id: migrate
+#         run: |
+#           node .github/scripts/gei-migrate-repo.js \
+#             --repository "${{ matrix.repository }}" \
+#             --target-org "${{ github.event.client_payload.batch.targetOrganization }}" \
+#             --visibility "${{ github.event.client_payload.batch.targetRepositoryVisibility }}" \
+#             --migration-type "${{ github.event.client_payload.batch.migrationType }}" \
+#             --batch-number "${{ github.event.client_payload.batch.batchNumber }}" \
+#             --total-batches "${{ github.event.client_payload.batch.totalBatches }}"
+#         env:
+#           GH_PAT: ${{ secrets.TARGET_ADMIN_TOKEN }}
+#           GH_SOURCE_PAT: ${{ secrets.SOURCE_ADMIN_TOKEN }}
+
+#       # run additional migration workflows
+#       - name: Check if repo has LFS data
+#         id: lfs-check
+#         run: |
+#           OUTPUT=$(node .github/scripts/check-csv-repo.cjs lfs.csv "${{ matrix.repository }}")
+#           echo "$OUTPUT" >> $GITHUB_OUTPUT
+
+#       - name: Dispatch LFS workflow
+#         if: steps.lfs-check.outputs.found == 'true'
+#         uses: benc-uk/workflow-dispatch@v1
+#         with:
+#           workflow: migration-lfs.yml
+#           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+#           inputs: |
+#             {
+#               "repository": "${{ matrix.repository }}"
+#             }
+
+#       - name: Check if repo has packages
+#         id: packages-check
+#         run: |
+#           OUTPUT=$(node .github/scripts/check-csv-repo.cjs packages.csv "${{ matrix.repository }}")
+#           echo "$OUTPUT" >> $GITHUB_OUTPUT
+
+#       - name: Dispatch packages workflow
+#         if: steps.packages-check.outputs.found == 'true'
+#         uses: benc-uk/workflow-dispatch@v1
+#         with:
+#           workflow: migration-packages.yml
+#           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+#           inputs: |
+#             {
+#               "repository": "${{ matrix.repository }}"
+#             }
+
+#       - name: Check if repo has releases
+#         id: releases-check
+#         run: |
+#           REPO=$(echo "${{ matrix.repository }}" | sed -E 's#https?://[^/]+/##')
+#           DIR="/opt/migration/releases/$REPO"
+#           if [ -d "$DIR" ]; then
+#             echo "found=true" >> $GITHUB_OUTPUT
+#             echo "repo=$REPO" >> $GITHUB_OUTPUT
+#           else
+#             echo "found=false" >> $GITHUB_OUTPUT
+#             echo "repo=$REPO" >> $GITHUB_OUTPUT
+#           fi
+
+#       - name: Dispatch releases workflow
+#         if: steps.releases-check.outputs.found == 'true'
+#         uses: benc-uk/workflow-dispatch@v1
+#         with:
+#           workflow: migration-releases.yml
+#           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+#           inputs: |
+#             {
+#               "repo": "${{ steps.releases-check.outputs.repo }}"
+#             }
+
+#       - name: Reclaim mannequins
+#         continue-on-error: true
+#         run: |
+#           if [ -f "user-mappings-gei.csv" ]; then
+#             gei reclaim-mannequin \
+#               --csv user-mappings-gei.csv \
+#               --github-target-org ${{ github.event.client_payload.batch.targetOrganization }} \
+#               --github-target-pat ${{ secrets.TARGET_ADMIN_TOKEN }}
+#           else
+#             echo "No user-mappings-gei.csv file found, skipping mannequin reclaim"
+#           fi
+
+#       - name: Write repo migration status
+#         if: always()
+#         id: write-status
+#         run: |
+#           reponame=$(basename ${{ matrix.repository }})
+#           echo "repo-name=$reponame" >> "$GITHUB_OUTPUT" 
+#           echo "${{ matrix.repository }}, ${{ job.status }}" > ${reponame}.txt
+
+#       - name: Upload repo migration status
+#         uses: actions/upload-artifact@v4
+#         if: always()
+#         with:
+#           name: migration-status-batch-${{ github.event.client_payload.batch.batchNumber }}-${{ steps.write-status.outputs.repo-name }}
+#           path: ${{ steps.write-status.outputs.repo-name }}.txt
+
 name: Migration Batch Processor
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
 
 on:
   repository_dispatch:
@@ -14,285 +177,139 @@ jobs:
       fail-fast: false
       max-parallel: 10
     timeout-minutes: 50400
+    
+    env:
+      TARGET_ORG: ${{ github.event.client_payload.batch.targetOrganization }}
+      BATCH_NUMBER: ${{ github.event.client_payload.batch.batchNumber }}
+      MIGRATION_TYPE: ${{ github.event.client_payload.batch.migrationType }}
+      VISIBILITY: ${{ github.event.client_payload.batch.targetRepositoryVisibility }}
+      TOTAL_BATCHES: ${{ github.event.client_payload.batch.totalBatches }}
+      ORCHESTRATOR_RUN_ID: ${{ github.event.client_payload.orchestrator_run_id }}
+      INSTALL_PREREQS: ${{ github.event.client_payload.batch.installPrereqs || 'false' }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install common dependencies
-        if: ${{ github.event.client_payload.batch.installPrereqs == 'true' || github.event.client_payload.batch.installPrereqs == '' }}
+      - name: Parse repository info
+        id: repo-info
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes git unzip curl wget apt-transport-https software-properties-common
+          REPO_NAME=$(basename "${{ matrix.repository }}")
+          REPO_PATH=$(echo "${{ matrix.repository }}" | sed -E 's#https?://[^/]+/##')
+          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "path=$REPO_PATH" >> $GITHUB_OUTPUT
 
-      - name: Install GitHub Enterprise Importer
-        if: ${{ github.event.client_payload.batch.installPrereqs == 'true' || github.event.client_payload.batch.installPrereqs == '' }}
+      - name: Setup environment
+        if: env.INSTALL_PREREQS == 'true'
         run: |
-          if [ -z "$(command -v gei)" ]; then
-            wget https://github.com/github/gh-gei/releases/latest/download/gei-linux-amd64
+          sudo apt-get update && sudo apt-get install -y \
+            git unzip curl wget apt-transport-https software-properties-common
+          
+          if ! command -v gei &> /dev/null; then
+            wget -q https://github.com/github/gh-gei/releases/latest/download/gei-linux-amd64
             sudo install --owner root --group root --mode 755 gei-linux-amd64 /usr/local/bin/gei
           fi
-          gei --version
-
-      # - name: Install PowerShell
-      #   if: ${{ github.event.client_payload.batch.installPrereqs == 'true' || github.event.client_payload.batch.installPrereqs == '' }}
-      #   run: |
-      #     if [ -z "$(command -v pwsh)" ]; then
-      #       wget "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
-      #       sudo dpkg --install packages-microsoft-prod.deb
-      #       sudo apt-get update
-      #       sudo apt-get install --yes powershell
-      #     fi
-      #     pwsh --version
-
-      - if: runner.debug
-        name: GEI version number
-        run: gei --version
-
-      # - if: runner.debug
-      #   name: PowerShell version number
-      #   run: pwsh --version
-
-      - name: Create lock flag based on migration type
-        uses: actions/github-script@v7
-        id: lock-flag
-        with:
-          result-encoding: string
-          script: |
-            const migrationType = '${{ github.event.client_payload.batch.migrationType }}';
-            return migrationType === 'production' ? '--lock-source-repo' : '';
-
-      - name: Download repos visibility file
-        uses: actions/download-artifact@v4
-        if: github.event.client_payload.batch.targetRepositoryVisibility == 'Mirror'
-        continue-on-error: true
-        with:
-          name: source-repos-visibility.json
-          github-token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          run-id: ${{ github.event.client_payload.orchestrator_run_id }}
+          
+          echo "GEI Version: $(gei --version)"
 
       - name: Migrate repository
         id: migrate
         run: |
-          node .github/scripts/gei-migrate-repo.js \
-            --repository "${{ matrix.repository }}" \
-            --target-org "${{ github.event.client_payload.batch.targetOrganization }}" \
-            --visibility "${{ github.event.client_payload.batch.targetRepositoryVisibility }}" \
-            --migration-type "${{ github.event.client_payload.batch.migrationType }}" \
-            --batch-number "${{ github.event.client_payload.batch.batchNumber }}" \
-            --total-batches "${{ github.event.client_payload.batch.totalBatches }}"
+          ARGS=(
+            ".github/scripts/gei-migrate-repo.js"
+            "--repository" "${{ matrix.repository }}"
+            "--target-org" "${{ env.TARGET_ORG }}"
+            "--visibility" "${{ env.VISIBILITY }}"
+            "--migration-type" "${{ env.MIGRATION_TYPE }}"
+            "--batch-number" "${{ env.BATCH_NUMBER }}"
+            "--total-batches" "${{ env.TOTAL_BATCHES }}"
+          )
+          
+          # Add lock flag for production migrations
+          if [[ "${{ env.MIGRATION_TYPE }}" == "production" ]]; then
+            ARGS+=("--lock-source-repo")
+          fi
+          
+          node "${ARGS[@]}"
         env:
           GH_PAT: ${{ secrets.TARGET_ADMIN_TOKEN }}
           GH_SOURCE_PAT: ${{ secrets.SOURCE_ADMIN_TOKEN }}
 
-      # - name: Migrate repository
-      #   shell: pwsh
-      #   id: migrate
-      #   run: |
-      #     function Exec {
-      #       param (
-      #         [scriptblock]$ScriptBlock
-      #       )
-      #       & @ScriptBlock
-      #       if ($lastexitcode -ne 0) {
-      #         exit $lastexitcode
-      #       }
-      #     }
-
-      #     function ExecAndGetMigrationID {
-      #       param (
-      #         [scriptblock]$ScriptBlock
-      #       )
-      #       $MigrationID = Exec $ScriptBlock | ForEach-Object {
-      #         Write-Host $_
-      #         $_
-      #       } | Select-String -Pattern "\(ID: (.+)\)" | ForEach-Object { $_.matches.groups[1] }
-      #       return $MigrationID
-      #     }
-
-      #     $repository = '${{ matrix.repository }}'
-      #     $visibility = '${{ github.event.client_payload.batch.targetRepositoryVisibility }}'
-          
-      #     Write-Host "Processing repository: $repository"
-      #     Write-Host "Batch: ${{ github.event.client_payload.batch.batchNumber }} of ${{ github.event.client_payload.batch.totalBatches }}"
-          
-      #     # Determine visibility
-      #     if ($visibility -eq 'None') {
-      #       $VisibilityValue = 'private'
-      #     } elseif ($visibility -eq 'Mirror') {
-      #       $jsonFilePath = "./source-repos-visibility.json"
-      #       if (Test-Path $jsonFilePath) {
-      #         $jsonContent = Get-Content -Raw -Path $jsonFilePath | ConvertFrom-Json
-      #         if ($jsonContent.PSObject.Properties[$repository]) {
-      #             $visibilityValue = $jsonContent.$repository
-      #             if ($visibilityValue -eq 'public') {
-      #                 $visibilityValue = 'internal'
-      #             }
-      #         } else {
-      #             Write-Output "Repository URL not found in the JSON file...default to private"
-      #             $visibilityValue = 'private'
-      #         }
-      #       } else {
-      #         $visibilityValue = 'private'
-      #       }
-      #     } else {
-      #       $VisibilityValue = $visibility.ToLower()
-      #     }
-
-      #     # Parse repository URL
-      #     $Parts = $repository.Split("/")
-      #     $RepoName = $Parts[$Parts.length - 1]
-      #     $RepoOrg = $Parts[$Parts.length -2]
-      #     $RepoHost = $Parts[2]
-
-      #     Write-Host "Repo: $repository"
-      #     Write-Host "Visibility: $VisibilityValue"
-
-      #     # Set up storage credentials
-      #     if ('${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}' -ne '') {
-      #       $AzureStorageIncludeArg = "--azure-storage-connection-string"
-      #       $AzureStorageIncludeValue = "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
-      #     }
-
-      #     if ('${{ secrets.AWS_ACCESS_KEY_ID }}' -ne '') {
-      #       $AwsAccessKeyIdArg = "--aws-access-key"
-      #       $AwsAccessKeyIdValue = "${{ secrets.AWS_ACCESS_KEY_ID }}"
-      #       $AwsSecretAccessKeyArg = "--aws-secret-key"
-      #       $AwsSecretAccessKeyValue = "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-      #       $AwsRegionArg = "--aws-region"
-      #       $AwsRegionValue = "${{ vars.AWS_REGION }}"
-      #       $AwsBucketArg = "--aws-bucket-name"
-      #       $AwsBucketValue = "${{ vars.AWS_BUCKET_NAME }}"
-      #     }
-
-      #     # Handle GHES vs GitHub.com
-      #     if ($RepoHost -ne 'github.com') {
-      #       $ServerIncludeArg = "--ghes-api-url" 
-      #       $ServerIncludeValue = "https://$($RepoHost)/api/v3"
-      #     }
-
-      #     try {
-      #       $MigrationID = ExecAndGetMigrationID {
-      #         gei migrate-repo `
-      #         --source-repo $RepoName `
-      #         --target-repo $RepoName `
-      #         --github-source-org $RepoOrg `
-      #         --github-target-org '${{ github.event.client_payload.batch.targetOrganization }}' `
-      #         --target-repo-visibility $VisibilityValue `
-      #         $AzureStorageIncludeArg $AzureStorageIncludeValue `
-      #         $ServerIncludeArg $ServerIncludeValue `
-      #         $AwsAccessKeyIdArg $AwsAccessKeyIdValue `
-      #         $AwsSecretAccessKeyArg $AwsSecretAccessKeyValue `
-      #         $AwsRegionArg $AwsRegionValue `
-      #         $AwsBucketArg $AwsBucketValue `
-      #         ${{ steps.lock-flag.outputs.result }} `
-      #         --skip-releases `
-      #         --queue-only
-      #       }
-            
-      #       if ($MigrationID) {
-      #         Write-Host "Queued migration of repository $RepoName with ID $MigrationID"
-      #         Write-Host "Waiting for migration to complete..."
-              
-      #         gei wait-for-migration --migration-id $MigrationID
-      #         Write-Host "Migration completed successfully"
-      #       } else {
-      #         Write-Host "Failed to queue migration for repository $RepoName"
-      #         exit 1
-      #       }
-      #     } catch {
-      #       Write-Host "Error processing repository $repository : $_"
-      #       exit 1
-      #     }
-      #   env:
-      #     GH_PAT: ${{ secrets.TARGET_ADMIN_TOKEN }}
-      #     GH_SOURCE_PAT: ${{ secrets.SOURCE_ADMIN_TOKEN }}
-
-      # run additional migration workflows
-      - name: Check if repo has LFS data
-        id: lfs-check
+      - name: Check for additional migrations needed
+        id: migration-checks
         run: |
-          OUTPUT=$(node .github/scripts/check-csv-repo.cjs lfs.csv "${{ matrix.repository }}")
-          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          # Check LFS
+          if node .github/scripts/check-csv-repo.cjs lfs.csv "${{ matrix.repository }}" | grep -q "found=true"; then
+            echo "lfs=true" >> $GITHUB_OUTPUT
+          else
+            echo "lfs=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check packages
+          if node .github/scripts/check-csv-repo.cjs packages.csv "${{ matrix.repository }}" | grep -q "found=true"; then
+            echo "packages=true" >> $GITHUB_OUTPUT
+          else
+            echo "packages=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check releases
+          RELEASES_DIR="/opt/migration/releases/${{ steps.repo-info.outputs.path }}"
+          if [ -d "$RELEASES_DIR" ]; then
+            echo "releases=true" >> $GITHUB_OUTPUT
+          else
+            echo "releases=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Dispatch LFS workflow
-        if: steps.lfs-check.outputs.found == 'true'
+        if: steps.migration-checks.outputs.lfs == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: migration-lfs.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: |
-            {
-              "repository": "${{ matrix.repository }}"
-            }
-
-      - name: Check if repo has packages
-        id: packages-check
-        run: |
-          OUTPUT=$(node .github/scripts/check-csv-repo.cjs packages.csv "${{ matrix.repository }}")
-          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          inputs: '{"repository": "${{ matrix.repository }}"}'
 
       - name: Dispatch packages workflow
-        if: steps.packages-check.outputs.found == 'true'
+        if: steps.migration-checks.outputs.packages == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: migration-packages.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: |
-            {
-              "repository": "${{ matrix.repository }}"
-            }
-
-      - name: Check if repo has releases
-        id: releases-check
-        run: |
-          REPO=$(echo "${{ matrix.repository }}" | sed -E 's#https?://[^/]+/##')
-          DIR="/opt/migration/releases/$REPO"
-          if [ -d "$DIR" ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-            echo "repo=$REPO" >> $GITHUB_OUTPUT
-          else
-            echo "found=false" >> $GITHUB_OUTPUT
-            echo "repo=$REPO" >> $GITHUB_OUTPUT
-          fi
+          inputs: '{"repository": "${{ matrix.repository }}"}'
 
       - name: Dispatch releases workflow
-        if: steps.releases-check.outputs.found == 'true'
+        if: steps.migration-checks.outputs.releases == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: migration-releases.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: |
-            {
-              "repo": "${{ steps.releases-check.outputs.repo }}"
-            }
+          inputs: '{"repo": "${{ steps.repo-info.outputs.path }}"}'
 
       - name: Reclaim mannequins
+        if: hashFiles('user-mappings-gei.csv') != ''
         continue-on-error: true
         run: |
-          if [ -f "user-mappings-gei.csv" ]; then
-            gei reclaim-mannequin \
-              --csv user-mappings-gei.csv \
-              --github-target-org ${{ github.event.client_payload.batch.targetOrganization }} \
-              --github-target-pat ${{ secrets.TARGET_ADMIN_TOKEN }}
-          else
-            echo "No user-mappings-gei.csv file found, skipping mannequin reclaim"
-          fi
+          gei reclaim-mannequin \
+            --csv user-mappings-gei.csv \
+            --github-target-org ${{ env.TARGET_ORG }} \
+            --github-target-pat ${{ secrets.TARGET_ADMIN_TOKEN }}
 
-      - name: Write repo migration status
+      - name: Report migration status
         if: always()
-        id: write-status
         run: |
-          reponame=$(basename ${{ matrix.repository }})
-          echo "repo-name=$reponame" >> "$GITHUB_OUTPUT" 
-          echo "${{ matrix.repository }}, ${{ job.status }}" > ${reponame}.txt
+          # Create status file
+          STATUS_FILE="${{ steps.repo-info.outputs.name }}.txt"
+          echo "${{ matrix.repository }}, ${{ job.status }}" > "$STATUS_FILE"
+          
+          # Also add to job summary for easy viewing
+          echo "| ${{ matrix.repository }} | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload repo migration status
-        uses: actions/upload-artifact@v4
+      - name: Upload migration status
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: migration-status-batch-${{ github.event.client_payload.batch.batchNumber }}-${{ steps.write-status.outputs.repo-name }}
-          path: ${{ steps.write-status.outputs.repo-name }}.txt
+          name: migration-status-batch-${{ env.BATCH_NUMBER }}-${{ steps.repo-info.outputs.name }}
+          path: ${{ steps.repo-info.outputs.name }}.txt
+          retention-days: 7
 
   batch-summary:
     name: Batch ${{ github.event.client_payload.batch.batchNumber }} Summary
@@ -313,63 +330,72 @@ jobs:
           BATCH_INFO: ${{ toJson(github.event.client_payload.batch) }}
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
-            const batchInfo = JSON.parse(process.env.BATCH_INFO);
+            const script = require('./.github/scripts/batch-summary.js');
+            return await script({github, context, core});
 
-            let successfulRepos = [];
-            let failedRepos = [];
-            const dir = `batch-${batchInfo.batchNumber}-status`;
+      # - name: Create batch status summary
+      #   uses: actions/github-script@v7
+      #   env:
+      #     BATCH_INFO: ${{ toJson(github.event.client_payload.batch) }}
+      #   with:
+      #     script: |
+      #       const fs = require('fs');
+      #       const path = require('path');
+      #       const batchInfo = JSON.parse(process.env.BATCH_INFO);
 
-            if (fs.existsSync(`./${dir}`)) {
-              fs.readdirSync(`./${dir}`).forEach(file => {
-                if (path.extname(file) === '.txt') {
-                  let [repo, status] = fs.readFileSync(`${dir}/${file}`, 'utf-8').split(',');
-                  if (status.trim() === 'success') {
-                    successfulRepos.push(repo);
-                  } else {
-                    failedRepos.push(repo);
-                  }
-                }
-              });
-            }
+      #       let successfulRepos = [];
+      #       let failedRepos = [];
+      #       const dir = `batch-${batchInfo.batchNumber}-status`;
 
-            const batchStatus = {
-              batchNumber: batchInfo.batchNumber,
-              totalBatches: batchInfo.totalBatches,
-              successful: successfulRepos,
-              failed: failedRepos,
-              totalProcessed: successfulRepos.length + failedRepos.length,
-              migrationId: batchInfo.migrationId,
-              migrationType: batchInfo.migrationType
-            };
+      #       if (fs.existsSync(`./${dir}`)) {
+      #         fs.readdirSync(`./${dir}`).forEach(file => {
+      #           if (path.extname(file) === '.txt') {
+      #             let [repo, status] = fs.readFileSync(`${dir}/${file}`, 'utf-8').split(',');
+      #             if (status.trim() === 'success') {
+      #               successfulRepos.push(repo);
+      #             } else {
+      #               failedRepos.push(repo);
+      #             }
+      #           }
+      #         });
+      #       }
 
-            fs.writeFileSync(`batch-${batchInfo.batchNumber}-status.json`, JSON.stringify(batchStatus, null, 2));
+      #       const batchStatus = {
+      #         batchNumber: batchInfo.batchNumber,
+      #         totalBatches: batchInfo.totalBatches,
+      #         successful: successfulRepos,
+      #         failed: failedRepos,
+      #         totalProcessed: successfulRepos.length + failedRepos.length,
+      #         migrationId: batchInfo.migrationId,
+      #         migrationType: batchInfo.migrationType
+      #       };
+
+      #       fs.writeFileSync(`batch-${batchInfo.batchNumber}-status.json`, JSON.stringify(batchStatus, null, 2));
             
-            // Post summary comment to the original issue
-            const successIcon = failedRepos.length === 0 ? ':white_check_mark:' : ':warning:';
-            let body = `${successIcon} **Batch ${batchInfo.batchNumber} of ${batchInfo.totalBatches} Complete**\n\n`;
-            body += `**Successful:** ${successfulRepos.length}\n`;
-            body += `**Failed:** ${failedRepos.length}\n`;
-            body += `**Total:** ${successfulRepos.length + failedRepos.length}\n\n`;
+      #       // Post summary comment to the original issue
+      #       const successIcon = failedRepos.length === 0 ? ':white_check_mark:' : ':warning:';
+      #       let body = `${successIcon} **Batch ${batchInfo.batchNumber} of ${batchInfo.totalBatches} Complete**\n\n`;
+      #       body += `**Successful:** ${successfulRepos.length}\n`;
+      #       body += `**Failed:** ${failedRepos.length}\n`;
+      #       body += `**Total:** ${successfulRepos.length + failedRepos.length}\n\n`;
             
-            if (failedRepos.length > 0) {
-              body += `**Failed Repositories:**\n\`\`\`\n${failedRepos.slice(0, 10).join('\n')}`;
-              if (failedRepos.length > 10) {
-                body += `\n... and ${failedRepos.length - 10} more`;
-              }
-              body += `\n\`\`\`\n\n`;
-              body += `💡 **Tip:** You can re-run this batch by manually triggering the migration-batch-processor workflow.`;
-            }
+      #       if (failedRepos.length > 0) {
+      #         body += `**Failed Repositories:**\n\`\`\`\n${failedRepos.slice(0, 10).join('\n')}`;
+      #         if (failedRepos.length > 10) {
+      #           body += `\n... and ${failedRepos.length - 10} more`;
+      #         }
+      #         body += `\n\`\`\`\n\n`;
+      #         body += `💡 **Tip:** You can re-run this batch by manually triggering the migration-batch-processor workflow.`;
+      #       }
             
-            body += `\n\n[View batch details →](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+      #       body += `\n\n[View batch details →](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
 
-            await github.rest.issues.createComment({
-              issue_number: batchInfo.issueNumber,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
+      #       await github.rest.issues.createComment({
+      #         issue_number: batchInfo.issueNumber,
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         body
+      #       });
 
       - name: Upload batch status
         uses: actions/upload-artifact@v4
