@@ -1,0 +1,116 @@
+name: Migration Orchestrator (Repository Dispatch)
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ORGANIZATION:
+        description: 'The GitHub Enterprise Cloud organization to migrate to'
+        required: true
+        type: string
+      RUNNER:
+        description: 'The runner to use for all of the jobs in the workflow'
+        type: string
+        default: 'ubuntu-latest'
+      INSTALL_PREREQS:
+        description: 'If set to true, installs pre-requisites from apt, pwsh, and gei'
+        type: string
+        default: 'true'
+      BATCH_SIZE:
+        description: 'Number of repositories per batch'
+        type: number
+        default: 250
+      MIGRATION_TYPE:
+        description: 'Type of migration (dry-run or production)'
+        required: true
+        type: string
+    secrets:
+      TARGET_ADMIN_TOKEN:
+        required: true
+      SOURCE_ADMIN_TOKEN:
+        required: true
+      AZURE_STORAGE_CONNECTION_STRING:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  prepare:
+    name: Prepare Migration
+    runs-on: ${{ inputs.RUNNER }}
+    outputs:
+      batches: ${{ steps.create-batches.outputs.batches }}
+      migration_id: ${{ steps.generate-id.outputs.id }}
+      batch_count: ${{ steps.create-batches.outputs.batch_count }}
+      migration_type: ${{ steps.determine-type.outputs.type }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Parse issue body
+        id: parse-issue-body
+        uses: stefanbuck/github-issue-parser@v3
+        
+      - name: Generate migration ID
+        id: generate-id
+        run: echo "id=${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        
+      - name: Determine migration type
+        id: determine-type
+        run: |
+          echo "type=${{ inputs.MIGRATION_TYPE }}" >> $GITHUB_OUTPUT
+        
+      - name: Create batches
+        id: create-batches
+        uses: actions/github-script@v7
+        env:
+          REPOS: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
+          BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
+        with:
+          script: |
+            const script = require('./.github/scripts/orchestrate-batch-dispatch.js');
+            return await script({github, context, core, env});
+            
+      - name: Start issue comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const migrationType = '${{ inputs.MIGRATION_TYPE }}';
+            const migrationTypeDisplay = migrationType.charAt(0).toUpperCase() + migrationType.slice(1);
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `:rocket: Starting ${migrationTypeDisplay} migration with ${{ steps.create-batches.outputs.batch_count }} sequential batches. [Track progress](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n**Batch Size:** ${{ inputs.BATCH_SIZE }} repositories per batch\n**Processing:** Sequential (one batch at a time)\n\n:stop_sign: To cancel this migration, click the Cancel button in the Actions UI or add a comment with \`/cancel-migration\``
+            });
+
+  dispatch-batches:
+    name: Dispatch Batches Sequentially
+    needs: [prepare]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ${{ inputs.RUNNER }}
+    timeout-minutes: 50400
+    steps:
+      - name: Process batches sequentially
+        uses: actions/github-script@v7
+        env:
+          BATCHES: ${{ needs.prepare.outputs.batches }}
+        with:
+          github-token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          script: |
+            const script = require('./.github/scripts/orchestrate-batch-dispatch.js');
+            return await script({github, context, core, env});
+
+  final-report:
+    name: Final Report
+    needs: [prepare, dispatch-batches]
+    runs-on: ${{ inputs.RUNNER }}
+    if: always() && needs.prepare.result == 'success'
+    steps:
+      - name: Generate final report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./.github/scripts/final-report.js');
+            return await script({github, context, core, env});
