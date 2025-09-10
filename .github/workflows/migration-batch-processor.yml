@@ -330,7 +330,7 @@ jobs:
           BATCH_INFO: ${{ toJson(github.event.client_payload.batch) }}
         with:
           script: |
-            const script = require('./.github/scripts/batch-summary.js');
+            const script = require('${{ github.workspace }}/.github/scripts/batch-summary.js')
             return await script({github, context, core});
 
       # - name: Create batch status summary
