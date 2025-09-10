@@ -90,9 +90,9 @@ module.exports = async ({github, context, core, env}) => {
 
     // For repositories migrating with GEI, inform about batching
     const labelsResponse = await github.rest.issues.listLabelsOnIssue({
-        issue_number: ${{ github.event.issue.number }},
-        owner: '${{ github.REPOSITORY_OWNER }}',
-        repo: '${{ github.event.repository.name }}'
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo
     });
     const labels = labelsResponse.data.map(label => label.name);
 
@@ -109,9 +109,9 @@ module.exports = async ({github, context, core, env}) => {
     }
                 
     await github.rest.issues.createComment({
-        issue_number: ${{ github.event.issue.number }},
-        owner: '${{ github.REPOSITORY_OWNER }}',
-        repo: '${{ github.event.repository.name }}',
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
         body: commentBody
     })
 }
