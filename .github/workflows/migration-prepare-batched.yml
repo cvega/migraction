@@ -37,7 +37,7 @@ jobs:
         with:
           script: |
             const script = require('./.github/scripts/prepare-issue.js');
-            return await script({github, context, core, env});
+            return await script({github, context});
         env:
           REPOSITORIES: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
           VISIBILITY: ${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}
