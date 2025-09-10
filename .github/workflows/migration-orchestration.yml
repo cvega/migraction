@@ -92,6 +92,7 @@ jobs:
     runs-on: ${{ inputs.RUNNER }}
     timeout-minutes: 50400
     steps:
+      - uses: actions/checkout@v4
       - name: Process batches sequentially
         uses: actions/github-script@v8
         env:
@@ -108,6 +109,7 @@ jobs:
     runs-on: ${{ inputs.RUNNER }}
     if: always() && needs.prepare.result == 'success'
     steps:
+      - uses: actions/checkout@v4
       - name: Generate final report
         uses: actions/github-script@v7
         with:
