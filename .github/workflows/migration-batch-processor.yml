@@ -74,7 +74,7 @@ jobs:
       - name: Migrate repository
         id: migrate
         run: |
-          node .github/scripts/migrate-repo.js \
+          node .github/scripts/gei-migrate-repo.js \
             --repository "${{ matrix.repository }}" \
             --target-org "${{ github.event.client_payload.batch.targetOrganization }}" \
             --visibility "${{ github.event.client_payload.batch.targetRepositoryVisibility }}" \
