@@ -134,10 +134,10 @@ module.exports = async ({github, context}) => {
             
             // Post success comment
             await github.rest.issues.createComment({
-            issue_number: batch.issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `:white_check_mark: Batch ${batchNumber} of ${batches.length} dispatched successfully\n\n[View batch workflow →](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions?query=event%3Arepository_dispatch)`
+                issue_number: batch.issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `:white_check_mark: Batch ${batchNumber} of ${batches.length} dispatched successfully\n\n[View batch workflow →](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions?query=event%3Arepository_dispatch)`
             });
         } else {
             const errorText = await response.text();
@@ -145,18 +145,18 @@ module.exports = async ({github, context}) => {
         }
         
         } catch (error) {
-        console.log(`Failed to dispatch batch ${batchNumber}: ${error.message}`);
-        
-        // Post failure comment
-        await github.rest.issues.createComment({
-            issue_number: batch.issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `:x: Failed to dispatch batch ${batchNumber} of ${batches.length}\n\n**Error:** ${error.message}\n\n**Workaround:** Manually trigger the migration-batch-processor workflow with batch data.`
-        });
-        
-        // Continue with next batch instead of failing completely
-        continue;
+            console.log(`Failed to dispatch batch ${batchNumber}: ${error.message}`);
+            
+            // Post failure comment
+            await github.rest.issues.createComment({
+                issue_number: batch.issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `:x: Failed to dispatch batch ${batchNumber} of ${batches.length}\n\n**Error:** ${error.message}\n\n**Workaround:** Manually trigger the migration-batch-processor workflow with batch data.`
+            });
+            
+            // Continue with next batch instead of failing completely
+            continue;
         }
         
         // WAIT FOR THIS SPECIFIC BATCH TO COMPLETE
