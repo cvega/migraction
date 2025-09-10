@@ -53,40 +53,26 @@ module.exports = async ({github, context}) => {
         console.log('HTML blocks were removed from the input');
     }
 
-    let commentBody
-    commentBody = `👋 Thank you for opening this migration issue.
-
-    **${numberOfRepositories} repositories** have been parsed from your issue body
-
-    The **target organization** is set to be: **\`${process.env.TARGET_ORG}\`**
-    The **target repository visibility** is set to be: **\`${visibility}\`**
-
-    <details>
-        <summary><b>Troubleshooting</b></summary>
-
-    If the parsed repositories are not matching the repositories listed in your issue body, you can edit the issue body or open a new issue using an issue template.
-    </details>
-
-    ## Run the migration
-
-    Add a comment to this issue with one of the following two commands in order to run a migration:
-
-    **Dry-run**
-
-    We recommend to do a "dry-run" migration first which **will not lock your source repository** and therefore does not block your users from continuing to work on the repository.
-
-    \\\`\\\`\\\`
-    /run-dry-run-migration
-    \\\`\\\`\\\`
-
-    **Production**
-
-    After you have verified your "dry-run" migration and after you have announced the production migration to your users, create a comment with the following command to start the production migration. It **will lock your source repository** and make it unaccessible for your users.
-
-    \\\`\\\`\\\`
-    /run-production-migration
-    \\\`\\\`\\\`
-    `;
+    let commentBody = '👋 Thank you for opening this migration issue.\n\n';
+    commentBody += `**${numberOfRepositories} repositories** have been parsed from your issue body\n\n`;
+    commentBody += `The **target organization** is set to be: **\`${process.env.TARGET_ORG}\`**\n`;
+    commentBody += `The **target repository visibility** is set to be: **\`${visibility}\`**\n\n`;
+    commentBody += '<details>\n';
+    commentBody += '    <summary><b>Troubleshooting</b></summary>\n\n';
+    commentBody += 'If the parsed repositories are not matching the repositories listed in your issue body, you can edit the issue body or open a new issue using an issue template.\n';
+    commentBody += '</details>\n\n';
+    commentBody += '## Run the migration\n\n';
+    commentBody += 'Add a comment to this issue with one of the following two commands in order to run a migration:\n\n';
+    commentBody += '**Dry-run**\n\n';
+    commentBody += 'We recommend to do a "dry-run" migration first which **will not lock your source repository** and therefore does not block your users from continuing to work on the repository.\n\n';
+    commentBody += '```\n';
+    commentBody += '/run-dry-run-migration\n';
+    commentBody += '```\n\n';
+    commentBody += '**Production**\n\n';
+    commentBody += 'After you have verified your "dry-run" migration and after you have announced the production migration to your users, create a comment with the following command to start the production migration. It **will lock your source repository** and make it unaccessible for your users.\n\n';
+    commentBody += '```\n';
+    commentBody += '/run-production-migration\n';
+    commentBody += '```\n';
 
     // For repositories migrating with GEI, inform about batching
     const labelsResponse = await github.rest.issues.listLabelsOnIssue({
