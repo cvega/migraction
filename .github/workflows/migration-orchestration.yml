@@ -63,17 +63,17 @@ jobs:
         
       - name: Create batches
         id: create-batches
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           REPOS: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
           BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
         with:
           script: |
             const script = require('./.github/scripts/orchestrate-batch-dispatch.js');
-            return await script({github, context, core, env});
+            return await script({github, context});
             
       - name: Start issue comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const migrationType = '${{ inputs.MIGRATION_TYPE }}';
