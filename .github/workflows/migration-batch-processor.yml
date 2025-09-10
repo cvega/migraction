@@ -60,11 +60,11 @@ jobs:
           ARGS=(
             ".github/scripts/gei-migrate-repo.js"
             "--repository" "${{ matrix.repository }}"
-            "--target-org" "${{ env.TARGET_ORG }}"
-            "--visibility" "${{ env.VISIBILITY }}"
-            "--migration-type" "${{ env.MIGRATION_TYPE }}"
-            "--batch-number" "${{ env.BATCH_NUMBER }}"
-            "--total-batches" "${{ env.TOTAL_BATCHES }}"
+            "--target-org" "$TARGET_ORG"
+            "--visibility" "$VISIBILITY"
+            "--migration-type" "$MIGRATION_TYPE"
+            "--batch-number" "$BATCH_NUMBER"
+            "--total-batches" "$TOTAL_BATCHES"
           )
           
           # Add lock flag for production migrations
