@@ -5,6 +5,7 @@ module.exports = async ({ github, context, core }) => {
   const token = process.env.TARGET_ADMIN_TOKEN;
 
   console.log(`Starting deletion of ${repoNames.length} repositories from ${targetOrg}`);
+  console.log(`Repository type: ${isDryRun ? 'dry-run' : 'production'}`);
 
   const results = {
     successful: [],
@@ -12,40 +13,49 @@ module.exports = async ({ github, context, core }) => {
     notFound: []
   };
 
-  // Create authenticated Octokit instance for target org
-  const { Octokit } = require('@octokit/rest');
-  const targetOctokit = new Octokit({
-    auth: token
-  });
-
-  // Process deletions
+  // Process deletions using fetch API directly
+  // This avoids dependency issues in GitHub Actions
   for (const repoName of repoNames) {
     try {
       console.log(`Attempting to delete ${targetOrg}/${repoName}...`);
       
       // First check if repo exists
-      try {
-        await targetOctokit.repos.get({
-          owner: targetOrg,
-          repo: repoName
-        });
-      } catch (error) {
-        if (error.status === 404) {
-          console.log(`Repository ${repoName} not found`);
-          results.notFound.push(repoName);
-          continue;
+      const checkResponse = await fetch(`https://api.github.com/repos/${targetOrg}/${repoName}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'GitHub-Actions'
         }
-        throw error;
+      });
+
+      if (checkResponse.status === 404) {
+        console.log(`Repository ${repoName} not found`);
+        results.notFound.push(repoName);
+        continue;
+      }
+
+      if (!checkResponse.ok) {
+        throw new Error(`Failed to check repository: ${checkResponse.status} ${checkResponse.statusText}`);
       }
 
       // Delete the repository
-      await targetOctokit.repos.delete({
-        owner: targetOrg,
-        repo: repoName
+      const deleteResponse = await fetch(`https://api.github.com/repos/${targetOrg}/${repoName}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'GitHub-Actions'
+        }
       });
-      
-      console.log(`Successfully deleted ${repoName}`);
-      results.successful.push(repoName);
+
+      if (deleteResponse.status === 204) {
+        console.log(`Successfully deleted ${repoName}`);
+        results.successful.push(repoName);
+      } else {
+        const errorText = await deleteResponse.text();
+        throw new Error(`Delete failed: ${deleteResponse.status} - ${errorText}`);
+      }
       
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -64,6 +74,8 @@ module.exports = async ({ github, context, core }) => {
   const successCount = results.successful.length;
   const failCount = results.failed.length;
   const notFoundCount = results.notFound.length;
+  
+  console.log(`Deletion complete: ${successCount} successful, ${failCount} failed, ${notFoundCount} not found`);
   
   let summaryBody = `## 🗑️ Repository Deletion Complete
 
@@ -133,10 +145,10 @@ Your dry-run repositories have been cleaned up. You can now:
     body: summaryBody
   });
 
-  // Set outputs for workflow
-  core.setOutput('deleted_count', successCount);
-  core.setOutput('failed_count', failCount);
-  core.setOutput('not_found_count', notFoundCount);
+  // Set outputs for workflow - MUST BE STRINGS
+  core.setOutput('deleted_count', successCount.toString());
+  core.setOutput('failed_count', failCount.toString());
+  core.setOutput('not_found_count', notFoundCount.toString());
   
   // Fail the workflow if there were failures
   if (failCount > 0) {
