@@ -1,4 +1,5 @@
 name: Migration Batch Processor
+run-name: "Migration Batch ${{ github.event.client_payload.batch.batchNumber }} - ID:${{ github.event.client_payload.batch.batchId }}"
 
 permissions:
   contents: read
@@ -29,6 +30,7 @@ jobs:
       ORCHESTRATOR_RUN_ID: ${{ github.event.client_payload.orchestrator_run_id }}
       INSTALL_PREREQS: ${{ github.event.client_payload.batch.installPrereqs || 'false' }}
       REPOSITORY: ${{ matrix.repository }}
+      BATCH_ID: ${{ github.event.client_payload.batch.batchId }}
 
     steps:
       - name: Checkout code
@@ -184,3 +186,4 @@ jobs:
         with:
           name: batch-${{ github.event.client_payload.batch.batchNumber }}-status
           path: batch-${{ github.event.client_payload.batch.batchNumber }}-status.json
+          retention-days: 7
