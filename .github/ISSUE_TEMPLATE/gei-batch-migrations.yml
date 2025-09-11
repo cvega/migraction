@@ -1,0 +1,201 @@
+name: 🚀 Migrate Repositories to GitHub Enterprise Cloud / EMU
+description: Batch migrate repositories from GHES or GHEC to GitHub Enterprise Cloud using GitHub Enterprise Importer
+title: "[GEI Migration] <your-project-name>"
+labels: ["migration", "gei", "batch"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🚀 GitHub Enterprise Importer (GEI) Migration
+        
+        > **Welcome!** This issue will track your repository migration from GitHub Enterprise Server (GHES) or GitHub Enterprise Cloud (GHEC) to your target organization.
+        
+        ---
+        
+        ## 📋 Pre-Migration Checklist
+        
+        Before submitting this issue, ensure you have:
+        - [ ] Admin access to source repositories
+        - [ ] Admin access to target organization
+        - [ ] Reviewed the [GEI documentation](https://docs.github.com/en/migrations/using-github-enterprise-importer)
+        - [ ] Backed up critical data
+        - [ ] Notified your team about the migration window
+        
+        ---
+
+  - type: dropdown
+    id: source-type
+    attributes:
+      label: 📍 Source Platform
+      description: Where are you migrating from?
+      options:
+        - GitHub Enterprise Server (GHES)
+        - GitHub Enterprise Cloud (GHEC)
+        - GitHub.com
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: repositories
+    attributes:
+      label: 📦 Repositories to Migrate
+      description: |
+        **Enter the full URLs of repositories to migrate** (one per line)
+        
+        💡 **Tips:**
+        - Include the full URL (e.g., `https://github.example.com/org/repo`)
+        - You can migrate up to 1000 repositories in a single batch
+        - Repositories will be processed in batches of 250 for optimal performance
+        - Use the collapsible section below for large lists
+        
+        ⚠️ **Important:** Ensure URLs are accessible and you have admin permissions
+      placeholder: |
+        https://github.example.com/your-org/repository-1
+        https://github.example.com/your-org/repository-2
+        https://github.example.com/your-org/repository-3
+      value: |
+        <details>
+        <summary>📋 Repository List (click to expand)</summary>
+        
+        <!-- Add your repository URLs below, one per line -->
+        <!-- Example: https://github.example.com/acme-corp/frontend-app -->
+        
+        
+        
+        </details>
+    validations:
+      required: true
+
+  - type: dropdown
+    id: visibility
+    attributes:
+      label: 🔒 Target Repository Visibility
+      description: |
+        **Choose the default visibility for migrated repositories**
+        
+        - **Private**: Only visible to organization members with access
+        - **Internal**: Visible to all members of your enterprise
+        - **Mirror**: Preserve the original repository's visibility settings
+      options:
+        - Private
+        - Internal
+        - Mirror
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: migration-priority
+    attributes:
+      label: ⚡ Migration Priority
+      description: How urgent is this migration?
+      options:
+        - "🔴 Critical - Business blocking"
+        - "🟡 High - Time sensitive"
+        - "🟢 Normal - Standard timeline"
+        - "⚪ Low - When convenient"
+      default: 2
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: migration-options
+    attributes:
+      label: ⚙️ Migration Options
+      description: Select additional migration settings
+      options:
+        - label: "🔐 Lock source repositories during production migration"
+          required: false
+        - label: "📎 Include Git LFS objects"
+          required: false
+        - label: "📦 Migrate packages (npm, Maven, etc.)"
+          required: false
+        - label: "🏷️ Migrate releases and tags"
+          required: false
+        - label: "👥 Map user accounts (mannequins)"
+          required: false
+
+  - type: textarea
+    id: special-requirements
+    attributes:
+      label: 📝 Special Requirements or Notes
+      description: |
+        **Optional:** Add any special considerations, dependencies, or notes for the migration team
+        
+        Examples:
+        - Specific migration window requirements
+        - Dependencies on other repositories
+        - Post-migration tasks needed
+        - Team notifications required
+      placeholder: |
+        - Please migrate after 6 PM EST
+        - Repository X must be migrated before Repository Y
+        - Need to update CI/CD pipelines after migration
+
+  - type: dropdown
+    id: post-migration
+    attributes:
+      label: 🗑️ Post-Migration Actions
+      description: What should happen to the source repositories after successful migration?
+      options:
+        - Keep source repositories (no changes)
+        - Archive source repositories
+        - Delete source repositories (after verification)
+        - Decision pending
+      default: 0
+    validations:
+      required: false
+
+  - type: textarea
+    id: team-contacts
+    attributes:
+      label: 👥 Team Contacts
+      description: |
+        **Optional:** Provide contact information for stakeholders
+        
+        This helps us reach out if we need clarification or encounter issues
+      placeholder: |
+        - Technical Lead: @github-username
+        - Project Manager: @another-username
+        - Email: team@example.com
+      
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 🎯 What Happens Next?
+        
+        Once you submit this issue:
+        
+        1. **Validation** - Our automation will validate your inputs and post a summary
+        2. **Commands** - You'll receive instructions to start the migration:
+           - `/run-dry-run-migration` - Test migration without locking repositories
+           - `/run-production-migration` - Execute the actual migration
+        3. **Progress** - Migration status updates will be posted as comments
+        4. **Completion** - Final report with results and any follow-up actions
+        
+        ---
+        
+        ### 📚 Helpful Resources
+        
+        - [GEI Documentation](https://docs.github.com/en/migrations/using-github-enterprise-importer)
+        - [Migration Best Practices](https://docs.github.com/en/migrations/using-github-enterprise-importer/understanding-github-enterprise-importer/migration-best-practices)
+        - [Troubleshooting Guide](https://docs.github.com/en/migrations/using-github-enterprise-importer/completing-your-migration-with-github-enterprise-importer/troubleshooting-your-migration)
+        
+        ---
+        
+        ### ⚡ Quick Commands Reference
+        
+        | Command | Description |
+        |---------|-------------|
+        | `/run-dry-run-migration` | Start a test migration (recommended first) |
+        | `/run-production-migration` | Start the actual migration |
+        | `/cancel-migration` | Stop an in-progress migration |
+        | `/delete-repositories` | Delete dry-run repositories |
+        
+        ---
+        
+        💬 **Questions?** Add a comment below or contact your migration support team
