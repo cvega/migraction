@@ -10,7 +10,7 @@ permissions:
   actions: write
 
 jobs:
-  prepare:
+  validate-and-initialize-issue:
     name: Prepare Repos Migration
     runs-on: ubuntu-latest
 

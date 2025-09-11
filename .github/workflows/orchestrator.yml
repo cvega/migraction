@@ -36,8 +36,8 @@ on:
         required: true
 
 jobs:
-  prepare:
-    name: Prepare Migration
+  prepare-migration-batches:
+    name: Prepare Migration Batches
     runs-on: ${{ inputs.RUNNER }}
     outputs:
       batches: ${{ steps.create-batches.outputs.batches }}
@@ -90,9 +90,9 @@ jobs:
               body: `:rocket: Starting ${migrationTypeDisplay} migration with ${{ steps.create-batches.outputs.batch_count }} sequential batches. [Track progress](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n**Batch Size:** ${{ inputs.BATCH_SIZE }} repositories per batch\n**Processing:** Sequential (one batch at a time)\n\n:stop_sign: To cancel this migration, click the Cancel button in the Actions UI or add a comment with \`/cancel-migration\``
             });
 
-  dispatch-batches:
+  orchestrate-batch-execution:
     name: Orchestrate sequential batch execution
-    needs: [prepare]
+    needs: [prepare-migration-batches]
     if: always() && needs.prepare.result == 'success'
     runs-on: ${{ inputs.RUNNER }}
     timeout-minutes: 50400
@@ -108,9 +108,9 @@ jobs:
             const script = require('./.github/scripts/orchestration/orchestrate.js');
             return await script({github, context});
 
-  final-report:
-    name: Final Report
-    needs: [prepare, dispatch-batches]
+  post-migration-summary:
+    name: Post Migration Summary
+    needs: [prepare-migration-batches, orchestrate-batch-execution]
     runs-on: ${{ inputs.RUNNER }}
     if: always() && needs.prepare.result == 'success'
     steps:
