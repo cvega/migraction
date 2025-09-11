@@ -21,18 +21,19 @@ jobs:
       !contains(github.event.issue.labels.*.name, 'gei-org')
 
     steps:
-      - name: Check out scripts
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Parse issue body
+      - name: Extract repositories and settings from issue
         id: parse-issue-body
         uses: stefanbuck/github-issue-parser@v3
 
-      - run: echo $JSON_STRING
+      - name: "Debug: Display parsed issue data"
+        run: echo $JSON_STRING
         env:
           JSON_STRING: ${{ steps.parse-issue-body.outputs.jsonString }}
         
-      - name: Post prepare message
+      - name: Post migration setup instructions
         uses: actions/github-script@v8
         with:
           script: |
@@ -44,7 +45,7 @@ jobs:
           TARGET_ORG: ${{ vars.TARGET_ORGANIZATION }}
           TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
 
-      - name: Post failure message
+      - name: Report issue parsing error
         if: ${{ failure() }}
         uses: actions/github-script@v8
         with:

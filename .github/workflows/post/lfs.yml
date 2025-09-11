@@ -12,7 +12,7 @@ jobs:
   migrate-lfs:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Install gh migrate-lfs extension
@@ -20,7 +20,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
     
-    - name: Sync LFS data
+    - name: Migrate LFS objects to target repository
       run: |
         gh migrate-lfs sync --help
         # gh migrate-lfs sync \

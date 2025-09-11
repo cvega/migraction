@@ -12,15 +12,15 @@ jobs:
   migrate-packages:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Install gh migrate-packages extension
       run: gh extension install mona-actions/gh-migrate-packages
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
-    
-    - name: Sync packages
+
+    - name: Migrate packages to target repository
       run: |
         gh migrate-packages sync --help
         # gh migrate-packages sync \

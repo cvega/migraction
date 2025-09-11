@@ -12,15 +12,15 @@ jobs:
   migrate-releases:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
     
     - name: Install gh migrate-releases extension
       run: gh extension install mona-actions/gh-migrate-releases
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
-    
-    - name: Sync releases 
+
+    - name: Migrate releases to target repository
       run: |
         gh migrate-releases sync \
           --repository ${{ inputs.repo }} \

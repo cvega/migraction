@@ -45,23 +45,23 @@ jobs:
       batch_count: ${{ steps.create-batches.outputs.batch_count }}
       migration_type: ${{ steps.determine-type.outputs.type }}
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Parse issue body
+      - name: Extract migration parameters from issue
         id: parse-issue-body
         uses: stefanbuck/github-issue-parser@v3
         
-      - name: Generate migration ID
+      - name: Create unique migration identifier
         id: generate-id
         run: echo "id=${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
         
-      - name: Determine migration type
+      - name: Set migration mode (dry-run/production)
         id: determine-type
         run: |
           echo "type=${{ inputs.MIGRATION_TYPE }}" >> $GITHUB_OUTPUT
         
-      - name: Create batches
+      - name: Split repositories into batches of ${{ inputs.BATCH_SIZE }}
         id: create-batches
         uses: actions/github-script@v8
         with:
@@ -77,7 +77,7 @@ jobs:
           VISIBILITY: ${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}
           INSTALL_PREREQS: ${{ inputs.INSTALL_PREREQS }}
             
-      - name: Start issue comment
+      - name: Post migration start notification
         uses: actions/github-script@v8
         with:
           script: |
@@ -91,7 +91,7 @@ jobs:
             });
 
   dispatch-batches:
-    name: Dispatch Batches Sequentially
+    name: Orchestrate sequential batch execution
     needs: [prepare]
     if: always() && needs.prepare.result == 'success'
     runs-on: ${{ inputs.RUNNER }}
@@ -115,7 +115,7 @@ jobs:
     if: always() && needs.prepare.result == 'success'
     steps:
       - uses: actions/checkout@v4
-      - name: Generate final report
+      - name: Post migration completion summary
         uses: actions/github-script@v8
         env:
           BATCH_COUNT: ${{ needs.prepare.outputs.batch_count }}
