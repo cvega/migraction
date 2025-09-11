@@ -122,5 +122,5 @@ jobs:
           MIGRATION_TYPE: ${{ needs.prepare-migration-batches.outputs.migration_type }}
         with:
           script: |
-            const script = require('./.github/scripts/reporting/post-migration-summary.js');
+            const script = require('./.github/scripts/reporting/final-report.js');
             return await script({github, context});
