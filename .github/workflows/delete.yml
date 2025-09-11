@@ -1,0 +1,66 @@
+name: Delete Migrated Repositories
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  delete-repositories:
+    name: Delete Repositories from Target Organization
+    runs-on: ubuntu-latest
+    
+    if: contains(github.event.comment.body, '/delete-repositories') || 
+        contains(github.event.comment.body, '/delete-dry-run')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Extract repositories from issue
+        id: parse-issue-body
+        uses: stefanbuck/github-issue-parser@v3
+        
+      - name: Request confirmation
+        id: confirm
+        uses: actions/github-script@v8
+        env:
+          REPOSITORIES_JSON: ${{ steps.parse-issue-body.outputs.jsonString }}
+          TARGET_ORG: ${{ vars.TARGET_ORGANIZATION }}
+          IS_DRY_RUN: ${{ contains(github.event.comment.body, 'dry-run') }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+        with:
+          script: |
+            const script = require('./.github/scripts/cleanup/confirm.js');
+            return await script({github, context, core});
+            
+      - name: Wait for confirmation
+        id: wait-confirm
+        if: steps.confirm.outputs.needs_confirmation == 'true'
+        uses: actions/github-script@v8
+        env:
+          TIMEOUT_MINUTES: '5'
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+        with:
+          script: |
+            const script = require('./.github/scripts/cleanup/wait.js');
+            return await script({github, context, core});
+            
+      - name: Delete repositories
+        if: steps.confirm.outputs.needs_confirmation != 'true' || steps.wait-confirm.outputs.confirmed == 'true'
+        uses: actions/github-script@v8
+        env:
+          TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          TARGET_ORG: ${{ vars.TARGET_ORGANIZATION }}
+          REPO_NAMES: ${{ steps.confirm.outputs.repo_names }}
+          IS_DRY_RUN: ${{ contains(github.event.comment.body, 'dry-run') }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        with:
+          script: |
+            const script = require('./.github/scripts/cleanup/delete.js');
+            return await script({github, context, core});
