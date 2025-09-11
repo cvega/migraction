@@ -40,8 +40,8 @@ jobs:
             const script = require('./.github/scripts/reporting/init-issue.js');
             return await script({github, context});
         env:
-          REPOSITORIES: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
-          VISIBILITY: ${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}
+          REPOSITORIES: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._repositories }}
+          VISIBILITY: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_repository_visibility }}
           TARGET_ORG: ${{ vars.TARGET_ORGANIZATION }}
           TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
 
