@@ -69,12 +69,12 @@ jobs:
             const script = require('./.github/scripts/orchestration/create-batches.js');
             return await script({context, core});
         env:
-          REPOS: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
+          REPOS: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._repositories }}
           BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
           MIGRATION_ID: ${{ steps.generate-id.outputs.id }}
           MIGRATION_TYPE: ${{ inputs.MIGRATION_TYPE }}
           TARGET_ORG: ${{ inputs.TARGET_ORGANIZATION }}
-          VISIBILITY: ${{ steps.parse-issue-body.outputs.issueparser_target_repository_visibility }}
+          VISIBILITY: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_repository_visibility }}
           INSTALL_PREREQS: ${{ inputs.INSTALL_PREREQS }}
             
       - name: Post migration start notification
