@@ -160,7 +160,7 @@ jobs:
     needs: process-batch
     if: always()
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Download all repository status artifacts

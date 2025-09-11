@@ -98,7 +98,7 @@ jobs:
     timeout-minutes: 50400
     steps:
       - uses: actions/checkout@v4
-      - name: Process batches sequentially
+      - name: Orchestrate sequential batch execution
         uses: actions/github-script@v8
         env:
           BATCHES: ${{ needs.prepare.outputs.batches }}
