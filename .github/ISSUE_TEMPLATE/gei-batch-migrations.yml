@@ -28,7 +28,7 @@ body:
     id: source-type
     attributes:
       label: Source Platform
-      description: Where are you migrating from?
+      description: 📍 Where are you migrating from?
       options:
         - GitHub Enterprise Server (GHES)
         - GitHub Enterprise Cloud (GHEC)
@@ -42,7 +42,7 @@ body:
     attributes:
       label: Repositories
       description: |
-        **Enter the full URLs of repositories to migrate** (one per line)
+        📦 **Enter the full URLs of repositories to migrate** (one per line)
         
         💡 **Tips:**
         - Include the full URL (e.g., `https://github.example.com/org/repo`)
@@ -57,7 +57,7 @@ body:
         https://github.example.com/your-org/repository-3
       value: |
         <details>
-        <summary>Repository List (click to expand)</summary>
+        <summary>📋 Repository List (click to expand)</summary>
         
         <!-- Add your repository URLs below, one per line -->
         <!-- Example: https://github.example.com/acme-corp/frontend-app -->
@@ -73,7 +73,7 @@ body:
     attributes:
       label: Target repository visibility
       description: |
-        **Choose the default visibility for migrated repositories**
+        🔒 **Choose the default visibility for migrated repositories**
         
         - **Private**: Only visible to organization members with access
         - **Internal**: Visible to all members of your enterprise  
@@ -90,12 +90,12 @@ body:
     id: migration-priority
     attributes:
       label: Migration Priority
-      description: How urgent is this migration?
+      description: ⚡ How urgent is this migration?
       options:
-        - "Critical - Business blocking"
-        - "High - Time sensitive"
-        - "Normal - Standard timeline"
-        - "Low - When convenient"
+        - "🔴 Critical - Business blocking"
+        - "🟡 High - Time sensitive"
+        - "🟢 Normal - Standard timeline"
+        - "⚪ Low - When convenient"
       default: 2
     validations:
       required: false
@@ -104,17 +104,17 @@ body:
     id: migration-options
     attributes:
       label: Migration Requirements
-      description: Select what needs to be included in your migration
+      description: ⚙️ Select what needs to be included in your migration
       options:
-        - label: "Repository uses Git LFS (Large File Storage)"
+        - label: "📎 Repository uses Git LFS (Large File Storage)"
           required: false
-        - label: "Repository contains packages (npm, Maven, NuGet, etc.)"
+        - label: "📦 Repository contains packages (npm, Maven, NuGet, etc.)"
           required: false
-        - label: "Need to preserve releases and tags"
+        - label: "🏷️ Need to preserve releases and tags"
           required: false
-        - label: "Migration must occur outside business hours"
+        - label: "⏰ Migration must occur outside business hours"
           required: false
-        - label: "Repository can be locked during production migration"
+        - label: "🔒 Repository can be locked during production migration"
           required: false
 
   - type: textarea
@@ -122,7 +122,7 @@ body:
     attributes:
       label: Special Requirements or Notes
       description: |
-        **Optional:** Add any special considerations, dependencies, or notes for the migration team
+        📝 **Optional:** Add any special considerations, dependencies, or notes for the migration team
         
         Examples:
         - Specific migration window requirements
@@ -138,7 +138,7 @@ body:
     id: post-migration
     attributes:
       label: Post-Migration Requirements
-      description: Do you need any post-migration support?
+      description: 🔄 Do you need any post-migration support?
       options:
         - No additional support needed
         - Need help updating CI/CD pipelines
@@ -154,7 +154,7 @@ body:
     attributes:
       label: Team Contacts
       description: |
-        **Optional:** Provide contact information for stakeholders
+        👥 **Optional:** Provide contact information for stakeholders
         
         This helps us reach out if we need clarification or encounter issues
       placeholder: |
