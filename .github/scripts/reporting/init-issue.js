@@ -1,103 +1,161 @@
 module.exports = async ({github, context}) => {
-    // if process.env.VISIBILITY is 'None', set it to 'private'
-    let visibility
-    if (process.env.VISIBILITY == 'None') {
-        visibility = 'Private'
-    } else {
-        visibility = process.env.VISIBILITY
-    }
+    // Handle visibility formatting
+    const visibility = process.env.VISIBILITY === 'None' ? 'Private' : process.env.VISIBILITY;
 
-    // Get the raw repository text
+    // Get and parse repositories
     const repoText = process.env.REPOSITORIES || '';
-
+    
     console.log('=== DEBUG REPOSITORIES ===');
     console.log('REPOSITORIES exists:', !!process.env.REPOSITORIES);
     console.log('Length:', repoText.length);
     console.log('First 500 chars:', repoText.substring(0, 500));
     console.log('=== END DEBUG ===');
 
-    // Remove ONLY the HTML tags, not the content
+    // Clean HTML tags from repository text
     const cleanedText = repoText
-        .replace(/<details[^>]*>/gi, '')  // Remove opening details tag
-        .replace(/<\/details>/gi, '')     // Remove closing details tag
-        .replace(/<summary[^>]*>/gi, '')  // Remove opening summary tag
-        .replace(/<\/summary>/gi, '')     // Remove closing summary tag
-        .replace(/<!--[\s\S]*?-->/g, ''); // Remove HTML comments
+        .replace(/<details[^>]*>/gi, '')
+        .replace(/<\/details>/gi, '')
+        .replace(/<summary[^>]*>/gi, '')
+        .replace(/<\/summary>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '');
 
-    // Now split and filter the cleaned text
+    // Extract valid repository URLs
     const repoLines = cleanedText
         .split('\n')
         .map(line => line.trim())
         .filter(line => {
-        // Only count non-empty lines that look like URLs
-        if (!line) return false;
-        
-        // Additional safety check for any remaining HTML
-        if (line.includes('<') && line.includes('>')) return false;
-        
-        // Filter out markdown headers without URLs
-        if (line.startsWith('#') && !line.includes('://')) return false;
-        
-        // Basic check for URL-like content
-        return line.includes('://') || line.includes('github.');
+            if (!line) return false;
+            if (line.includes('<') && line.includes('>')) return false;
+            if (line.startsWith('#') && !line.includes('://')) return false;
+            return line.includes('://') || line.includes('github.');
         });
 
     const numberOfRepositories = repoLines.length;
 
-    // Optional: Log for debugging
-    console.log(`Original text length: ${repoText.length}`);
-    console.log(`Cleaned text length: ${cleanedText.length}`);
-    console.log(`Total lines in original: ${repoText.split('\n').length}`);
-    console.log(`Valid repositories found: ${numberOfRepositories}`);
-    if (repoText !== cleanedText) {
-        console.log('HTML blocks were removed from the input');
-    }
+    // Log parsing results
+    console.log(`Total valid repositories found: ${numberOfRepositories}`);
 
-    let commentBody = '👋 Thank you for opening this migration issue.\n\n';
-    commentBody += `**${numberOfRepositories} repositories** have been parsed from your issue body\n\n`;
-    commentBody += `The **target organization** is set to be: **\`${process.env.TARGET_ORG}\`**\n`;
-    commentBody += `The **target repository visibility** is set to be: **\`${visibility}\`**\n\n`;
-    commentBody += '<details>\n';
-    commentBody += '    <summary><b>Troubleshooting</b></summary>\n\n';
-    commentBody += 'If the parsed repositories are not matching the repositories listed in your issue body, you can edit the issue body or open a new issue using an issue template.\n';
-    commentBody += '</details>\n\n';
-    commentBody += '## Run the migration\n\n';
-    commentBody += 'Add a comment to this issue with one of the following two commands in order to run a migration:\n\n';
-    commentBody += '**Dry-run**\n\n';
-    commentBody += 'We recommend to do a "dry-run" migration first which **will not lock your source repository** and therefore does not block your users from continuing to work on the repository.\n\n';
-    commentBody += '```\n';
-    commentBody += '/run-dry-run-migration\n';
-    commentBody += '```\n\n';
-    commentBody += '**Production**\n\n';
-    commentBody += 'After you have verified your "dry-run" migration and after you have announced the production migration to your users, create a comment with the following command to start the production migration. It **will lock your source repository** and make it unaccessible for your users.\n\n';
-    commentBody += '```\n';
-    commentBody += '/run-production-migration\n';
-    commentBody += '```\n';
-
-    // For repositories migrating with GEI, inform about batching
+    // Build welcome message
+    const commentBody = buildWelcomeMessage({
+        numberOfRepositories,
+        targetOrg: process.env.TARGET_ORG,
+        visibility,
+        context
+    });
+    
+    // Check if this is a large batch migration
     const labelsResponse = await github.rest.issues.listLabelsOnIssue({
         issue_number: context.issue.number,
         owner: context.repo.owner,
         repo: context.repo.repo
     });
+    
     const labels = labelsResponse.data.map(label => label.name);
-
-    if (labels.some(label => label.includes('gei')) && numberOfRepositories > 200) {
-        const batches = Math.ceil(numberOfRepositories / 200);
-        commentBody += `
-        
-        ---
-        
-        **📦 Batch Processing Information**
-        
-        Since you're migrating **${numberOfRepositories} repositories**, they will be processed in **${batches} sequential batches** of up to 200 repositories each to ensure reliable migration. You'll receive progress updates as each batch is processed.
-        `
-    }
+    const isGEIMigration = labels.some(label => label.includes('gei'));
+    const isLargeBatch = numberOfRepositories > 200;
+    
+    // Add batch processing info if needed
+    const finalComment = isGEIMigration && isLargeBatch 
+        ? appendBatchInfo(commentBody, numberOfRepositories)
+        : commentBody;
                 
+    // Post the comment
     await github.rest.issues.createComment({
         issue_number: context.issue.number,
         owner: context.repo.owner,
         repo: context.repo.repo,
-        body: commentBody
-    })
+        body: finalComment
+    });
+}
+
+// Helper function to build the main welcome message
+function buildWelcomeMessage({ numberOfRepositories, targetOrg, visibility, context }) {
+    return `## 🎉 Migration Request Received!
+
+Thank you for submitting your migration request. I've successfully parsed your issue and am ready to help you migrate your repositories.
+
+### 📊 Migration Summary
+
+| Item | Details |
+|------|---------|
+| **Repositories to migrate** | ${numberOfRepositories} |
+| **Target organization** | \`${targetOrg}\` |
+| **Repository visibility** | \`${visibility}\` |
+| **Migration ID** | #${context.issue.number} |
+
+<details>
+<summary>⚠️ <b>Parsed different number of repositories?</b></summary>
+
+If the number above doesn't match your expectation:
+- Edit this issue to fix any formatting problems
+- Ensure each repository URL is on its own line
+- Remove any comments or extra text between URLs
+- Or open a new issue using the template
+
+</details>
+
+---
+
+## 🚀 Ready to Migrate?
+
+Choose your migration path by commenting with one of these commands:
+
+### Option 1: Test Migration (Recommended First)
+Start with a **dry-run** to validate the migration without affecting your source repositories.
+
+\`\`\`
+/run-dry-run-migration
+\`\`\`
+
+**✅ Benefits:**
+- No repository locking
+- Users can continue working
+- Validates migration process
+- Identifies potential issues
+
+### Option 2: Production Migration
+Once you've validated the dry-run and notified your team, proceed with the production migration.
+
+\`\`\`
+/run-production-migration
+\`\`\`
+
+**⚠️ Important:**
+- **Will lock** source repositories
+- Users cannot push changes during migration
+- Ensure team is notified
+- Have your dry-run results ready
+
+---
+
+### 📚 Need Help?
+
+- [Migration Best Practices](https://docs.github.com/en/migrations/using-github-enterprise-importer/understanding-github-enterprise-importer/migration-best-practices)
+- [Troubleshooting Guide](https://docs.github.com/en/migrations/using-github-enterprise-importer/completing-your-migration-with-github-enterprise-importer/troubleshooting-your-migration)
+- Reply to this issue with questions
+
+---
+
+*I'll post updates here as your migration progresses. You can cancel anytime with \`/cancel-migration\`*`;
+}
+
+// Helper function to append batch processing information
+function appendBatchInfo(commentBody, numberOfRepositories) {
+    const batches = Math.ceil(numberOfRepositories / 200);
+    
+    return `${commentBody}
+
+---
+
+## 📦 Large Migration Detected
+
+Since you're migrating **${numberOfRepositories} repositories**, they'll be processed in **${batches} sequential batches** of up to 200 repositories each.
+
+**Why batches?**
+- Ensures reliable migration
+- Prevents timeouts
+- Better error handling
+- Progress tracking per batch
+
+You'll receive updates as each batch completes.`;
 }
