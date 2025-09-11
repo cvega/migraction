@@ -93,7 +93,7 @@ jobs:
   orchestrate-batch-execution:
     name: Orchestrate sequential batch execution
     needs: [prepare-migration-batches]
-    if: always() && needs.prepare.result == 'success'
+    if: always() && needs.prepare-migration-batches.result == 'success'
     runs-on: ${{ inputs.RUNNER }}
     timeout-minutes: 50400
     steps:
@@ -101,7 +101,7 @@ jobs:
       - name: Orchestrate sequential batch execution
         uses: actions/github-script@v8
         env:
-          BATCHES: ${{ needs.prepare.outputs.batches }}
+          BATCHES: ${{ needs.prepare-migration-batches.outputs.batches }}
           TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
         with:
           script: |
@@ -112,15 +112,15 @@ jobs:
     name: Post Migration Summary
     needs: [prepare-migration-batches, orchestrate-batch-execution]
     runs-on: ${{ inputs.RUNNER }}
-    if: always() && needs.prepare.result == 'success'
+    if: always() && needs.prepare-migration-batches.result == 'success'
     steps:
       - uses: actions/checkout@v4
       - name: Post migration completion summary
         uses: actions/github-script@v8
         env:
-          BATCH_COUNT: ${{ needs.prepare.outputs.batch_count }}
-          MIGRATION_TYPE: ${{ needs.prepare.outputs.migration_type }}
+          BATCH_COUNT: ${{ needs.prepare-migration-batches.outputs.batch_count }}
+          MIGRATION_TYPE: ${{ needs.prepare-migration-batches.outputs.migration_type }}
         with:
           script: |
-            const script = require('./.github/scripts/reporting/final-report.js');
+            const script = require('./.github/scripts/reporting/post-migration-summary.js');
             return await script({github, context});

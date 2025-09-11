@@ -10,7 +10,7 @@ permissions:
   actions: write
 
 jobs:
-  initiate-migration-orchestrations:
+  initiate-migration-orchestration:
     if: contains(github.event.comment.body, '/run-dry-run-migration') ||
         contains(github.event.comment.body, '/run-production-migration')
     uses: ./.github/workflows/orchestrator.yml
