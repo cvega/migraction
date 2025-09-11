@@ -27,8 +27,8 @@ body:
   - type: dropdown
     id: source-type
     attributes:
-      label: Source Platform
-      description: 📍 Where are you migrating from?
+      label: 📍 Source Platform
+      description: Where are you migrating from?
       options:
         - GitHub Enterprise Server (GHES)
         - GitHub Enterprise Cloud (GHEC)
@@ -40,9 +40,9 @@ body:
   - type: textarea
     id: repositories
     attributes:
-      label: Repositories
+      label: 📦 Repositories
       description: |
-        📦 **Enter the full URLs of repositories to migrate** (one per line)
+        **Enter the full URLs of repositories to migrate** (one per line)
         
         💡 **Tips:**
         - Include the full URL (e.g., `https://github.example.com/org/repo`)
@@ -71,9 +71,9 @@ body:
   - type: dropdown
     id: visibility
     attributes:
-      label: Target repository visibility
+      label: 🔒 Target repository visibility
       description: |
-        🔒 **Choose the default visibility for migrated repositories**
+        **Choose the default visibility for migrated repositories**
         
         - **Private**: Only visible to organization members with access
         - **Internal**: Visible to all members of your enterprise  
@@ -89,8 +89,8 @@ body:
   - type: dropdown
     id: migration-priority
     attributes:
-      label: Migration Priority
-      description: ⚡ How urgent is this migration?
+      label: ⚡ Migration Priority
+      description: How urgent is this migration?
       options:
         - "🔴 Critical - Business blocking"
         - "🟡 High - Time sensitive"
@@ -103,8 +103,8 @@ body:
   - type: checkboxes
     id: migration-options
     attributes:
-      label: Migration Requirements
-      description: ⚙️ Select what needs to be included in your migration
+      label: ⚙️ Migration Requirements
+      description: Select what needs to be included in your migration
       options:
         - label: "📎 Repository uses Git LFS (Large File Storage)"
           required: false
@@ -120,9 +120,9 @@ body:
   - type: textarea
     id: special-requirements
     attributes:
-      label: Special Requirements or Notes
+      label: 📝 Special Requirements
       description: |
-        📝 **Optional:** Add any special considerations, dependencies, or notes for the migration team
+        **Optional:** Add any special considerations, dependencies, or notes for the migration team
         
         Examples:
         - Specific migration window requirements
@@ -137,8 +137,8 @@ body:
   - type: dropdown
     id: post-migration
     attributes:
-      label: Post-Migration Requirements
-      description: 🔄 Do you need any post-migration support?
+      label: 🔄 Post-Migration Support
+      description: Do you need any post-migration support?
       options:
         - No additional support needed
         - Need help updating CI/CD pipelines
@@ -152,9 +152,9 @@ body:
   - type: textarea
     id: team-contacts
     attributes:
-      label: Team Contacts
+      label: 👥 Team Contacts
       description: |
-        👥 **Optional:** Provide contact information for stakeholders
+        **Optional:** Provide contact information for stakeholders
         
         This helps us reach out if we need clarification or encounter issues
       placeholder: |
