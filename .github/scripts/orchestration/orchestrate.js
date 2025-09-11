@@ -202,7 +202,7 @@ module.exports = async ({github, context}) => {
         const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            workflow_id: 'migration-batch-processor.yml',
+            workflow_id: 'batch-processor.yml',
             event: 'repository_dispatch',
             per_page: 50,
             status: 'all' // Get all statuses

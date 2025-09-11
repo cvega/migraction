@@ -45,7 +45,7 @@ module.exports = async ({github, context}) => {
         body += `\n... and ${failedRepos.length - 10} more`;
         }
         body += `\n\`\`\`\n\n`;
-        body += `💡 **Tip:** You can re-run this batch by manually triggering the migration-batch-processor workflow.`;
+        body += `💡 **Tip:** You can re-run this batch by manually triggering the batch-processor workflow.`;
     }
 
     body += `\n\n[View batch details →](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;

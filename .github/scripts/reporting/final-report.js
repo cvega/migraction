@@ -16,7 +16,7 @@ module.exports = async ({ github, context }) => {
         body += `---\n\n### Next Steps\n\nTo run the production migration:\n\`\`\`\n/run-production-migration\n\`\`\`\n\nTo delete the dry-run repositories:\n\`\`\`\n/delete-repositories\n\`\`\``;
     }
 
-    body += `\n\n### Re-running Failed Batches\n\nIf any batches failed, you can re-run them individually by triggering the migration-batch-processor workflow manually with the specific batch data.`;
+    body += `\n\n### Re-running Failed Batches\n\nIf any batches failed, you can re-run them individually by triggering the batch-processor workflow manually with the specific batch data.`;
 
     await github.rest.issues.createComment({
         issue_number: context.issue.number,
