@@ -1,346 +1,393 @@
-# GitHub Enterprise Migration System
+# 🚀 GitHub Enterprise Migration System
 
-A comprehensive GitHub Actions-based solution for migrating repositories from GitHub Enterprise Server (GHES) or GitHub Enterprise Cloud (GHEC) to GitHub Enterprise Cloud using GitHub Enterprise Importer (GEI).
+> **Self-Service, Batch-Powered Repository Migrations at Scale**
 
-## Overview
+[![Migration Ready](https://img.shields.io/badge/Migration-Ready-success)](https://github.com)
+[![GEI Powered](https://img.shields.io/badge/Powered%20by-GEI-blue)](https://docs.github.com/en/migrations/using-github-enterprise-importer)
+[![Batch Processing](https://img.shields.io/badge/Batch-Processing-orange)](https://github.com)
 
-This migration system provides an automated, issue-driven workflow for migrating repositories at scale. It supports:
+Transform your GitHub migration experience with our automated, issue-driven system that makes large-scale repository transfers simple, trackable, and reliable. Perfect for organizations moving from GitHub Enterprise Server (GHES) or between GitHub Enterprise Cloud (GHEC) organizations.
 
-- **Batch Processing**: Automatically splits large migrations into manageable batches (default: 250 repos per batch)
-- **Migration Types**: Both dry-run (non-destructive) and production (with source locking) migrations
-- **Additional Data**: Automated migration of LFS data, packages, and releases
-- **Visibility Options**: Private, Internal, or Mirror (preserves source visibility)
-- **Progress Tracking**: Real-time updates via issue comments
+## ✨ Key Features
 
-## Prerequisites
+| Feature | Description |
+|---------|------------|
+| 📋 **Issue-Driven Workflow** | Create an issue, list your repos, and let automation handle the rest |
+| 📦 **Smart Batching** | Automatically splits large migrations into manageable chunks (250 repos/batch) |
+| 🔄 **Sequential Processing** | Reliable batch-by-batch execution with progress tracking |
+| 🧪 **Dry-Run Support** | Test migrations safely before production |
+| 🔒 **Production Mode** | Secure migration with source repository locking |
+| 💾 **Complete Data Transfer** | Includes LFS, packages, and releases |
+| 💬 **Real-Time Updates** | Progress notifications via issue comments |
+| 🛑 **Cancellation Support** | Stop migrations gracefully with `/cancel-migration` |
+| 👥 **User Mapping** | Automatic mannequin-to-user account mapping |
+| 🔧 **Self-Service** | Empower teams to run their own migrations |
 
-### Required Tools
-- GitHub Enterprise Importer (GEI) CLI
-- PowerShell Core (pwsh)
-- Node.js (for supporting scripts)
-- Git
+## 🏗️ Architecture Overview
 
-### Required Access
-- Source GitHub instance (GHES or GHEC) with admin access
-- Target GitHub Enterprise Cloud organization with admin access
-- Personal Access Tokens (PATs) with appropriate permissions
+```mermaid
+graph TB
+    subgraph "📝 Migration Initiation"
+        A[User Creates Issue] --> B[Issue Template]
+        B --> C[Prepare Workflow]
+        C --> D[Parse & Validate]
+        D --> E[Post Instructions]
+    end
+    
+    subgraph "🎯 Migration Trigger"
+        E --> F[User Comments Command]
+        F --> G{Command Type?}
+        G -->|/run-dry-run| H[Dry-Run Mode]
+        G -->|/run-production| I[Production Mode]
+    end
+    
+    subgraph "🔄 Orchestration Layer"
+        H --> J[Orchestrator Workflow]
+        I --> J
+        J --> K[Create Batches]
+        K --> L[Sequential Batch Dispatch]
+    end
+    
+    subgraph "⚡ Batch Processing"
+        L --> M[Batch Processor]
+        M --> N[Parallel Repo Migration]
+        N --> O[GEI CLI Execution]
+        O --> P{Additional Data?}
+        P -->|Yes| Q[Trigger LFS/Packages/Releases]
+        P -->|No| R[Update Status]
+        Q --> R
+    end
+    
+    subgraph "📊 Reporting"
+        R --> S[Batch Summary]
+        S --> T[Issue Comment Update]
+        T --> U{More Batches?}
+        U -->|Yes| L
+        U -->|No| V[Final Report]
+    end
+    
+    style A fill:#e1f5fe
+    style F fill:#fff9c4
+    style J fill:#f3e5f5
+    style M fill:#e8f5e9
+    style V fill:#c8e6c9
+```
 
-### Runner Requirements
-- Self-hosted runners recommended for large migrations
-- Ubuntu-based runners (or compatible Linux distribution)
-- Sufficient disk space for migration archives
+## 🚦 Migration Flow
 
-## Setup Instructions
+```mermaid
+sequenceDiagram
+    participant User
+    participant Issue
+    participant Orchestrator
+    participant BatchProcessor
+    participant GEI
+    participant Target
+    
+    User->>Issue: Create migration issue with repo list
+    Issue->>Orchestrator: Trigger via comment (/run-migration)
+    Orchestrator->>Orchestrator: Split into batches
+    
+    loop For each batch (sequential)
+        Orchestrator->>BatchProcessor: Dispatch batch
+        Note over BatchProcessor: Process repos in parallel
+        
+        loop For each repository
+            BatchProcessor->>GEI: Execute migration
+            GEI->>Target: Transfer repository
+            BatchProcessor->>Issue: Update progress
+        end
+        
+        BatchProcessor->>Orchestrator: Batch complete
+        Orchestrator->>Issue: Post batch summary
+    end
+    
+    Orchestrator->>Issue: Post final report
+    User->>Issue: Review results
+```
 
-### 1. Repository Setup
+## 🎯 Quick Start
 
-1. Clone this repository to your target GitHub organization:
+### 📋 Prerequisites
+
+- ✅ GitHub Enterprise Cloud organization (target)
+- ✅ Admin access to source and target
+- ✅ Personal Access Tokens (PATs)
+- ✅ Storage backend (Azure Blob or AWS S3)
+
+### 🔧 Setup Instructions
+
+#### 1️⃣ **Fork & Configure Repository**
+
 ```bash
-git clone <repository-url>
-cd <repository-name>
+# Fork this repository to your organization
+# Clone to your local machine
+git clone https://github.com/YOUR-ORG/migration-system.git
+cd migration-system
 ```
 
-2. Ensure the following directory structure exists:
-```
-.github/
-├── ISSUE_TEMPLATE/
-│   ├── config.yml
-│   └── github-repos-migration-gei-batch.yml
-├── scripts/
-│   └── check-csv-repo.cjs
-└── workflows/
-    ├── migration-batch-processor.yml
-    ├── migration-github-repos-gei-batched.yml
-    ├── migration-lfs.yml
-    ├── migration-packages.yml
-    ├── migration-prepare-batched.yml
-    ├── migration-releases.yml
-    └── shared-github-enterprise-cloud-gei-batched.yml
-```
+#### 2️⃣ **Configure Secrets** 🔐
 
-### 2. Configure Secrets
+Navigate to **Settings** → **Secrets and variables** → **Actions**
 
-Navigate to **Settings > Secrets and variables > Actions** in your repository and add:
+| Secret | Description | Required |
+|--------|-------------|----------|
+| `TARGET_ADMIN_TOKEN` | PAT for target org with `repo`, `admin:org`, `workflow` scopes | ✅ |
+| `SOURCE_ADMIN_TOKEN` | PAT for source with `repo`, `admin:org` scopes | ✅ |
+| `AZURE_STORAGE_CONNECTION_STRING` | Azure storage connection string | Choose one |
+| `AWS_ACCESS_KEY_ID` | AWS access key | storage option |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |  |
 
-#### Required Secrets
-- `TARGET_ADMIN_TOKEN`: PAT for target GitHub Enterprise Cloud organization
-  - Required scopes: `repo`, `admin:org`, `workflow`
-- `SOURCE_ADMIN_TOKEN`: PAT for source GitHub instance
-  - Required scopes: `repo`, `admin:org`
+#### 3️⃣ **Configure Variables** ⚙️
 
-#### Optional Storage Secrets (choose one)
-For Azure Blob Storage:
-- `AZURE_STORAGE_CONNECTION_STRING`: Connection string for Azure storage account
+Navigate to **Settings** → **Secrets and variables** → **Actions** → **Variables**
 
-For AWS S3:
-- `AWS_ACCESS_KEY_ID`: AWS access key
-- `AWS_SECRET_ACCESS_KEY`: AWS secret key
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `TARGET_ORGANIZATION` | Target GitHub org name | `my-company` |
+| `INSTALL_PREREQS` | Auto-install dependencies | `true` |
+| `AWS_REGION` | AWS region (if using S3) | `us-east-1` |
+| `AWS_BUCKET_NAME` | S3 bucket name (if using S3) | `migrations` |
 
-### 3. Configure Variables
+#### 4️⃣ **Optional: Prepare Support Files** 📁
 
-Navigate to **Settings > Secrets and variables > Actions > Variables** and add:
+<details>
+<summary>📦 For repositories with special requirements</summary>
 
-#### Required Variables
-- `TARGET_ORGANIZATION`: Name of the target GitHub Enterprise Cloud organization
-- `INSTALL_PREREQS`: Set to `true` to auto-install dependencies (recommended)
+Create these CSV files in your repository root:
 
-#### Optional Variables (for AWS S3)
-- `AWS_REGION`: AWS region for S3 bucket (e.g., `us-east-1`)
-- `AWS_BUCKET_NAME`: Name of the S3 bucket
-
-#### Optional Variables (for additional migrations)
-- `SOURCE_ORGANIZATION`: Source organization name (for releases migration)
-
-### 4. Prepare Supporting Files (Optional)
-
-If you have repositories with special requirements, create these CSV files in the repository root:
-
-**lfs.csv** - List repositories requiring LFS migration:
+**`lfs.csv`** - Repositories requiring LFS migration
 ```csv
 repository
-https://github.example.com/org/repo1
-https://github.example.com/org/repo2
+https://github.example.com/org/repo-with-lfs
 ```
 
-**packages.csv** - List repositories with packages to migrate:
+**`packages.csv`** - Repositories with packages
 ```csv
 repository
-https://github.example.com/org/repo1
-https://github.example.com/org/repo3
+https://github.example.com/org/repo-with-packages
 ```
 
-**user-mappings-gei.csv** - Map source users to target users:
+**`user-mappings-gei.csv`** - Map mannequins to real users
 ```csv
 source,target
-source-username1,target-username1
-source-username2,target-username2
+old-username,new-username
 ```
 
-### 5. Configure Runners (Optional)
+</details>
 
-For large migrations, configure self-hosted runners:
+## 🚀 Running Your Migration
 
-1. Add self-hosted runners to your repository or organization
-2. Update the `RUNNER` value in workflows from `ubuntu-latest` to your runner labels
-3. Ensure runners have:
-   - Internet access
-   - Sufficient disk space
-   - Required tools installed (or set `INSTALL_PREREQS=true`)
+### Step 1: Create Migration Issue 📝
 
-## Usage
-
-### Step 1: Create Migration Issue
-
-1. Navigate to **Issues > New Issue**
+1. Go to **Issues** → **New Issue**
 2. Select **"GHES/GHEC repos to GitHub migration [GEI]"** template
-3. Fill in the required information:
-   - **Repositories**: List of repository URLs (one per line)
-   - **Target repository visibility**: Choose Private, Internal, or Mirror
+3. Add your repositories:
 
-Example repository list:
-```
-https://github.example.com/org/repository1
-https://github.example.com/org/repository2
-https://github.example.com/org/repository3
-```
-
-For large lists, use the collapsible details section:
 ```markdown
 <details>
 <summary>Click to expand repository list</summary>
 
 https://github.example.com/org/repo1
 https://github.example.com/org/repo2
-<!-- ... more repositories ... -->
+https://github.example.com/org/repo3
+<!-- Add all your repositories here -->
 
 </details>
 ```
 
-### Step 2: Review Preparation
+4. Select visibility: `Private`, `Internal`, or `Mirror`
+5. Submit the issue
 
-After creating the issue, the system will:
-1. Parse your repository list
-2. Post a comment confirming:
-   - Number of repositories detected
-   - Target organization
-   - Target visibility setting
-   - Batch information (if >200 repositories)
+### Step 2: Review Automated Analysis 🔍
 
-### Step 3: Run Migration
+The system will automatically comment with:
+- ✅ Number of repositories detected
+- 📦 Batch breakdown (if >250 repos)
+- 🎯 Target organization confirmation
+- 👁️ Visibility settings
 
-Add a comment to the issue with one of these commands:
+### Step 3: Start Migration 🎬
 
-#### Dry-Run Migration (Recommended First)
+Add a comment to your issue:
+
+#### 🧪 **Test First (Recommended)**
 ```
 /run-dry-run-migration
 ```
-- Does NOT lock source repositories
-- Creates test repositories with `-dry-run-<timestamp>` suffix
-- Allows verification before production migration
+- ✅ Safe, non-destructive test
+- ✅ Creates test repos with `-dry-run-timestamp` suffix
+- ✅ Source remains unlocked
 
-#### Production Migration
+#### 🚀 **Production Migration**
 ```
 /run-production-migration
 ```
-- LOCKS source repositories during migration
-- Creates repositories with original names
-- Should be run after successful dry-run
+- ⚠️ Locks source repositories
+- ✅ Creates repos with original names
+- ✅ Run after successful dry-run
 
-### Step 4: Monitor Progress
+### Step 4: Monitor Progress 📊
 
-The system will provide updates via issue comments:
-- Batch start/completion notifications
-- Success/failure status for each batch
-- Links to detailed workflow runs
-- Final summary report
+Watch real-time updates in your issue:
 
-### Step 5: Post-Migration Actions
+```
+🚀 Starting Dry-Run migration with 10 sequential batches
+📦 Batch Size: 250 repositories per batch
+⏱️ Processing: Sequential (one batch at a time)
 
-#### After Dry-Run
-- Review migrated repositories
-- Check for any issues or missing data
-- Delete test repositories if needed: `/delete-repositories`
-- Proceed with production migration
+➡️ Starting batch 1 of 10 (250 repositories)
+✅ Batch 1 of 10 completed: success
+➡️ Starting batch 2 of 10 (250 repositories)
+...
+```
 
-#### After Production
-- Verify all repositories migrated successfully
-- Check LFS, packages, and releases if applicable
-- Update team access and permissions
-- Update CI/CD configurations
-- Notify users of completion
+### Step 5: Post-Migration 🎉
 
-## Advanced Configuration
+After successful migration:
+- 📋 Review the final report
+- 🔍 Verify all repositories
+- 👥 Update team access
+- 🔧 Configure CI/CD
+- 📢 Notify your teams
 
-### Batch Size Adjustment
+## 🎛️ Advanced Configuration
 
-Modify `BATCH_SIZE` in `migration-github-repos-gei-batched.yml`:
+### ⚙️ Customize Batch Size
+
+Edit workflow configuration for your needs:
+
 ```yaml
+# .github/workflows/trigger.yml
 BATCH_SIZE: 250  # Adjust based on your needs
 ```
 
-Considerations:
-- Smaller batches (50-100): More reliable, slower overall
-- Larger batches (500+): Faster but may hit API limits
+**Sizing Guide:**
+- 🐢 **Small (50-100)**: More reliable, slower
+- 🐇 **Medium (250)**: Balanced (default)
+- 🚄 **Large (500+)**: Faster, may hit limits
 
-### Timeout Configuration
+### 🔄 Parallel Processing
 
-For very large repositories, adjust timeouts in `migration-batch-processor.yml`:
+Control concurrent migrations per batch:
+
+```yaml
+# .github/workflows/batch-processor.yml
+max-parallel: 10  # Repos processed simultaneously
+```
+
+### ⏱️ Timeout Configuration
+
+For large repositories:
+
 ```yaml
 timeout-minutes: 50400  # Current: 35 days
 ```
 
-### Parallel Processing
+## 🛠️ Troubleshooting
 
-Modify `max-parallel` in `migration-batch-processor.yml`:
-```yaml
-max-parallel: 10  # Number of concurrent repository migrations per batch
-```
+### 🚨 Common Issues & Solutions
 
-### Custom Visibility Mapping
+<details>
+<summary>🔴 Migration Won't Start</summary>
 
-For Mirror mode, the system can preserve source visibility. Modify the visibility logic in `migration-batch-processor.yml` if you need custom mapping rules.
+**Checklist:**
+- ✅ Verify PAT permissions
+- ✅ Check secret names match exactly
+- ✅ Ensure issue has `migration` and `batch` labels
+- ✅ Confirm user has write access
 
-## Troubleshooting
+</details>
 
-### Common Issues
+<details>
+<summary>🟡 Batch Processing Stops</summary>
 
-#### 1. Migration Fails to Start
-- Verify PAT permissions
-- Check secret configuration
-- Ensure issue labels are correct (`migration`, `batch`)
+**Steps:**
+1. Check Actions tab for error details
+2. Verify runner availability
+3. Check API rate limits
+4. Re-run failed batch from Actions
 
-#### 2. Batch Processing Stops
-- Check workflow logs for specific errors
-- Verify runner availability
-- Check API rate limits
+</details>
 
-#### 3. Missing Data After Migration
-- Ensure LFS/packages CSVs are properly formatted
-- Verify source repository has the expected data
-- Check supplementary workflow logs
+<details>
+<summary>🔵 Missing LFS/Packages</summary>
 
-#### 4. Authentication Errors
-```
-Error: HttpError: Bad credentials
-```
-- Regenerate and update PATs
-- Verify token scopes
-- Check token expiration
+**Verify:**
+- CSV files are properly formatted
+- Source repo contains expected data
+- Check post-migration workflow logs
 
-### Canceling a Migration
+</details>
 
-To cancel an in-progress migration, add a comment:
+### 🛑 Emergency Controls
+
+**Cancel in-progress migration:**
 ```
 /cancel-migration
 ```
 
-This will:
-- Stop processing new batches
-- Cancel queued workflows
-- Allow running migrations to complete
+**Re-run specific batch:**
+1. Go to Actions tab
+2. Find failed batch workflow
+3. Click "Re-run failed jobs"
 
-### Re-running Failed Batches
+## 📊 Monitoring Dashboard
 
-1. Identify failed batch from issue comments
-2. Navigate to Actions tab
-3. Find the failed `migration-batch-processor` run
-4. Click "Re-run failed jobs"
+### Key Metrics Location
 
-### Manual Batch Execution
+| Metric | Where to Find |
+|--------|--------------|
+| 📈 Overall Progress | Issue comments |
+| 🔍 Detailed Logs | Actions tab → Workflow runs |
+| 📋 Batch Results | Workflow summaries |
+| 🗂️ Migration Artifacts | Configured storage (Azure/S3) |
 
-For specific batch re-runs:
-1. Go to Actions > migration-batch-processor
-2. Click "Run workflow"
-3. Provide batch configuration from logs
+## 🔒 Security Best Practices
 
-## Monitoring and Logs
+### 🛡️ Token Security
+- 🔑 Use repository secrets only
+- 🔄 Rotate tokens post-migration
+- 🎯 Minimum required permissions
 
-### Key Locations
-- **Issue Comments**: High-level progress updates
-- **Actions Tab**: Detailed workflow logs
-- **Workflow Run Summaries**: Batch-specific results
+### 👥 Access Control
+- 🚪 Restrict issue creation permissions
+- 🔒 Limit repository access during migration
+- 👁️ Review permissions post-migration
 
-### Log Retention
-- GitHub Actions logs: 90 days (default)
-- Migration artifacts: Based on your storage configuration
-- Issue history: Permanent record of migration
+### 💾 Data Handling
+- 🗄️ Temporary storage in configured backend
+- 🧹 Clean up after successful migration
+- 🔐 Consider encryption for sensitive repos
 
-## Security Considerations
+## 🤝 Contributing
 
-1. **Token Security**
-   - Use repository secrets, never hardcode tokens
-   - Rotate tokens after migration
-   - Use minimum required permissions
+We welcome contributions! Please:
+- 🧪 Test with dry-run migrations
+- 📚 Update documentation
+- 🎨 Follow existing patterns
+- 🐛 Report issues with details
 
-2. **Access Control**
-   - Restrict who can create migration issues
-   - Limit repository access during migration
-   - Review team permissions post-migration
+## 📞 Support
 
-3. **Data Handling**
-   - Migration data temporarily stored in configured storage
-   - Clean up storage after successful migration
-   - Consider encryption for sensitive repositories
-
-## Support and Contribution
-
-### Getting Help
-1. Check workflow logs for detailed error messages
-2. Review GitHub Enterprise Importer documentation
-3. Open an issue in this repository with:
+Need help? 
+1. 📖 Check [GEI documentation](https://docs.github.com/en/migrations/using-github-enterprise-importer)
+2. 🔍 Review workflow logs
+3. 💬 Open an issue with:
    - Error messages
    - Workflow run links
-   - Configuration details (excluding secrets)
+   - Configuration (exclude secrets!)
 
-### Contributing
-- Test changes thoroughly with dry-run migrations
-- Update documentation for new features
-- Follow existing code patterns and structure
+## 📜 License
 
-## License
-
-[Specify your license here]
+[Your License Here]
 
 ---
 
-**Note**: This migration system is designed for GitHub Enterprise migrations. Always perform dry-run migrations first and ensure you have backups of critical data before running production migrations.
+<div align="center">
+
+**🎯 Built for Scale** | **🔧 Self-Service Ready** | **📊 Full Visibility**
+
+Made with ❤️ for GitHub Enterprise migrations
+
+</div>
