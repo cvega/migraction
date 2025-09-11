@@ -1,6 +1,6 @@
-name: 🚀 Migrate Repositories to GitHub Enterprise Cloud / EMU
+name: 🚀 GHES/GHEC Repository Migration [GEI]
 description: Batch migrate repositories from GHES or GHEC to GitHub Enterprise Cloud using GitHub Enterprise Importer
-title: "[GEI Migration] <your-project-name>"
+title: "[GEI Migration] - <your-project-name>"
 labels: ["migration", "gei", "batch"]
 assignees: []
 body:
@@ -71,17 +71,15 @@ body:
   - type: dropdown
     id: visibility
     attributes:
-      label: 🔒 Target Repository Visibility
+      label: Target repository visibility
       description: |
         **Choose the default visibility for migrated repositories**
         
         - **Private**: Only visible to organization members with access
         - **Internal**: Visible to all members of your enterprise
-        - **Mirror**: Preserve the original repository's visibility settings
       options:
         - Private
         - Internal
-        - Mirror
       default: 0
     validations:
       required: true
