@@ -13,7 +13,7 @@ Transform your GitHub migration experience with our automated, issue-driven syst
 | Feature | Description |
 |---------|------------|
 | 📋 **Issue-Driven Workflow** | Create an issue, list your repos, and let automation handle the rest |
-| 📦 **Smart Batching** | Automatically splits large migrations into manageable chunks (250 repos/batch) |
+| 📦 **Smart Batching** | Automatically splits large migrations into manageable chunks (max 250 due to Actions matrix limit) |
 | 🔄 **Sequential Processing** | Reliable batch-by-batch execution with progress tracking |
 | 🧪 **Dry-Run Support** | Test migrations safely before production |
 | 🔒 **Production Mode** | Secure migration with source repository locking |
@@ -120,7 +120,7 @@ https://github.example.com/org/repo3
 
 The system will automatically comment with:
 - ✅ Number of repositories detected
-- 📦 Batch breakdown (if >250 repos)
+- 📦 Batch breakdown (if >250 repos total - limited by GitHub Actions matrix)
 - 🎯 Target organization confirmation
 - 👁️ Visibility settings
 
@@ -150,7 +150,7 @@ Watch real-time updates in your issue:
 
 ```
 🚀 Starting Dry-Run migration with 10 sequential batches
-📦 Batch Size: 250 repositories per batch
+📦 Batch Size: 250 repositories per batch (GitHub Actions matrix limit)
 ⏱️ Processing: Sequential (one batch at a time)
 
 ➡️ Starting batch 1 of 10 (250 repositories)
@@ -172,17 +172,12 @@ After successful migration:
 
 ### ⚙️ Customize Batch Size
 
-Edit workflow configuration for your needs:
+Edit workflow configuration for your needs (pre-configured to maximums):
 
 ```yaml
 # .github/workflows/trigger.yml
-BATCH_SIZE: 250  # Adjust based on your needs
+BATCH_SIZE: 256  # Maximum allowed by GitHub Actions matrix (256 limit)
 ```
-
-**Sizing Guide:**
-- 🐢 **Small (50-100)**: More reliable, slower
-- 🐇 **Medium (250)**: Balanced (default)
-- 🚄 **Large (500+)**: Faster, may hit limits
 
 ### 🔄 Parallel Processing
 
@@ -190,7 +185,7 @@ Control concurrent migrations per batch:
 
 ```yaml
 # .github/workflows/batch-processor.yml
-max-parallel: 10  # Repos processed simultaneously
+max-parallel: 10  # Maximum allowed by GitHub GEI tool (10 limit)
 ```
 
 ### ⏱️ Timeout Configuration
@@ -198,7 +193,7 @@ max-parallel: 10  # Repos processed simultaneously
 For large repositories:
 
 ```yaml
-timeout-minutes: 50400  # Current: 35 days
+timeout-minutes: 50400  # Maximum allowed by GitHub Actions, (35 day limit)
 ```
 
 ## 🛠️ Troubleshooting
