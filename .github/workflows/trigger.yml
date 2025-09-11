@@ -13,7 +13,7 @@ jobs:
   migrate:
     if: contains(github.event.comment.body, '/run-dry-run-migration') ||
         contains(github.event.comment.body, '/run-production-migration')
-    uses: ./.github/workflows/migration-orchestration.yml
+    uses: ./.github/workflows/orchestrator.yml
     with:
       TARGET_ORGANIZATION: ${{ vars.TARGET_ORGANIZATION }}
       RUNNER: ubuntu-latest

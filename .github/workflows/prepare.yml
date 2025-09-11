@@ -36,7 +36,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const script = require('./.github/scripts/prepare-issue.js');
+            const script = require('./.github/scripts/reporting/init-issue.js');
             return await script({github, context});
         env:
           REPOSITORIES: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}

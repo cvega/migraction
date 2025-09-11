@@ -82,14 +82,14 @@ jobs:
         id: migration-checks
         run: |
           # Check LFS
-          if node .github/scripts/check-csv-repo.cjs lfs.csv "${{ matrix.repository }}" | grep -q "found=true"; then
+          if node .github/scripts/migration/check-repo.cjs lfs.csv "${{ matrix.repository }}" | grep -q "found=true"; then
             echo "lfs=true" >> $GITHUB_OUTPUT
           else
             echo "lfs=false" >> $GITHUB_OUTPUT
           fi
           
           # Check packages
-          if node .github/scripts/check-csv-repo.cjs packages.csv "${{ matrix.repository }}" | grep -q "found=true"; then
+          if node .github/scripts/migration/check-repo.cjs packages.csv "${{ matrix.repository }}" | grep -q "found=true"; then
             echo "packages=true" >> $GITHUB_OUTPUT
           else
             echo "packages=false" >> $GITHUB_OUTPUT
@@ -171,12 +171,12 @@ jobs:
           merge-multiple: true
 
       - name: Create batch status summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           BATCH_INFO: ${{ toJson(github.event.client_payload.batch) }}
         with:
           script: |
-            const script = require('./.github/scripts/batch-summary.js')
+            const script = require('./.github/scripts/orchestration/batch-status.js');
             return await script({github, context, core});
 
       - name: Upload batch status

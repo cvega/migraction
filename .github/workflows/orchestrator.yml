@@ -66,7 +66,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const script = require('./.github/scripts/create-migration-batches.js');
+            const script = require('./.github/scripts/orchestration/create-batches.js');
             return await script({context, core});
         env:
           REPOS: ${{ steps.parse-issue-body.outputs.issueparser_repositories }}
@@ -105,7 +105,7 @@ jobs:
           TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
         with:
           script: |
-            const script = require('./.github/scripts/orchestrate-batch-dispatch.js');
+            const script = require('./.github/scripts/orchestration/orchestrate.js');
             return await script({github, context});
 
   final-report:
@@ -116,8 +116,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Generate final report
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
+        env:
+          BATCH_COUNT: ${{ needs.prepare.outputs.batch_count }}
+          MIGRATION_TYPE: ${{ needs.prepare.outputs.migration_type }}
         with:
           script: |
-            const script = require('./.github/scripts/final-report.js');
+            const script = require('./.github/scripts/reporting/final-report.js');
             return await script({github, context});

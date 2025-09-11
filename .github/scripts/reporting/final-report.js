@@ -1,6 +1,6 @@
-module.exports = async ({github, context}) => {
-    const batchCount = '${{ needs.prepare.outputs.batch_count }}' || '0';
-    const migrationType = '${{ needs.prepare.outputs.migration_type }}' || 'unknown';
+module.exports = async ({ github, context }) => {
+    const batchCount = process.env.BATCH_COUNT || '0';
+    const migrationType = process.env.MIGRATION_TYPE || 'unknown';
 
     console.log('Debug - batchCount:', batchCount);
     console.log('Debug - migrationType:', migrationType);
@@ -24,4 +24,4 @@ module.exports = async ({github, context}) => {
         repo: context.repo.repo,
         body
     });
-}
+};

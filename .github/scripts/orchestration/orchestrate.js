@@ -318,36 +318,36 @@ module.exports = async ({github, context}) => {
         
         // Post completion comment
         if (completedRun) {
-        const statusIcon = completedRun.conclusion === 'success' ? ':white_check_mark:' : ':x:';
-        await github.rest.issues.createComment({
-            issue_number: batch.issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `${statusIcon} Batch ${batchNumber} of ${batches.length} completed: **${completedRun.conclusion}**\n\n[View batch details →](${completedRun.html_url})`
-        });
+            const statusIcon = completedRun.conclusion === 'success' ? ':white_check_mark:' : ':x:';
+            await github.rest.issues.createComment({
+                issue_number: batch.issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `${statusIcon} Batch ${batchNumber} of ${batches.length} completed: **${completedRun.conclusion}**\n\n[View batch details →](${completedRun.html_url})`
+            });
         } else if (batchCompleted) {
-        // Completed without finding a specific run
-        await github.rest.issues.createComment({
-            issue_number: batch.issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `:white_check_mark: Batch ${batchNumber} of ${batches.length} completed\n\n_Note: Workflow run details not found, but no active workflows remain._`
-        });
+            // Completed without finding a specific run
+            await github.rest.issues.createComment({
+                issue_number: batch.issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `:white_check_mark: Batch ${batchNumber} of ${batches.length} completed\n\n_Note: Workflow run details not found, but no active workflows remain._`
+            });
         } else {
-        // Timed out
-        console.log(`WARNING: Batch ${batchNumber} timed out after 12 hours`);
-        await github.rest.issues.createComment({
-            issue_number: batch.issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `:warning: Batch ${batchNumber} of ${batches.length} timed out after 12 hours. Proceeding to next batch.`
-        });
+            // Timed out
+            console.log(`WARNING: Batch ${batchNumber} timed out after 12 hours`);
+            await github.rest.issues.createComment({
+                issue_number: batch.issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `:warning: Batch ${batchNumber} of ${batches.length} timed out after 12 hours. Proceeding to next batch.`
+            });
         }
         
         // Short delay before next batch
         if (i < batches.length - 1) {
-        console.log('Waiting 30 seconds before starting next batch...');
-        await new Promise(resolve => setTimeout(resolve, 30000));
+            console.log('Waiting 30 seconds before starting next batch...');
+            await new Promise(resolve => setTimeout(resolve, 30000));
         }
     }
 
