@@ -59,7 +59,7 @@ jobs:
         id: migrate
         run: |
           ARGS=(
-            ".github/scripts/gei-migrate-repo.js"
+            ".github/scripts/migration/gei-migrate.js"
             "--repository" "$REPOSITORY"
             "--target-org" "$TARGET_ORG"
             "--visibility" "$VISIBILITY"
@@ -107,7 +107,7 @@ jobs:
         if: steps.migration-checks.outputs.lfs == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: post/migration-lfs.yml
+          workflow: post/lfs.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: '{"repository": "${{ matrix.repository }}"}'
 
@@ -115,7 +115,7 @@ jobs:
         if: steps.migration-checks.outputs.packages == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: post/migration-packages.yml
+          workflow: post/packages.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: '{"repository": "${{ matrix.repository }}"}'
 
@@ -123,7 +123,7 @@ jobs:
         if: steps.migration-checks.outputs.releases == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: post/migration-releases.yml
+          workflow: post/releases.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: '{"repo": "${{ steps.repo-info.outputs.path }}"}'
 
