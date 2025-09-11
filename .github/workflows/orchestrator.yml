@@ -79,16 +79,16 @@ jobs:
             
       - name: Post migration start notification
         uses: actions/github-script@v8
+        env:
+          MIGRATION_TYPE: ${{ inputs.MIGRATION_TYPE }}
+          BATCH_COUNT: ${{ steps.create-batches.outputs.batch_count }}
+          BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
+          TOTAL_REPOS: ${{ steps.create-batches.outputs.total_repos }}
+          TARGET_ORG: ${{ inputs.TARGET_ORGANIZATION }}
         with:
           script: |
-            const migrationType = '${{ inputs.MIGRATION_TYPE }}';
-            const migrationTypeDisplay = migrationType.charAt(0).toUpperCase() + migrationType.slice(1);
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `:rocket: Starting ${migrationTypeDisplay} migration with ${{ steps.create-batches.outputs.batch_count }} sequential batches. [Track progress](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n\n**Batch Size:** ${{ inputs.BATCH_SIZE }} repositories per batch\n**Processing:** Sequential (one batch at a time)\n\n:stop_sign: To cancel this migration, click the Cancel button in the Actions UI or add a comment with \`/cancel-migration\``
-            });
+            const script = require('./.github/scripts/reporting/start-migration.js');
+            return await script({github, context});
 
   orchestrate-batch-execution:
     name: Orchestrate sequential batch execution

@@ -45,5 +45,6 @@ module.exports = async ({context, core}) => {
 
     core.setOutput('batches', JSON.stringify(batches));
     core.setOutput('batch_count', batchCount);
+    core.setOutput('total_repos', repos.length);
     console.log(`Created ${batchCount} batches for ${repos.length} repositories`);
 }
