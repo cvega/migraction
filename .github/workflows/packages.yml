@@ -35,20 +35,27 @@ jobs:
         echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
     
     - name: Report packages migration start
-      if: inputs.issue_number != ''
+      if: ${{ inputs.issue_number != '' }}
       uses: actions/github-script@v8
       with:
         script: |
+          const batchInfo = context.payload.inputs.batch_number ? 
+            `**Batch:** ${context.payload.inputs.batch_number}` : '';
+          
+          const message = [
+            '### 📦 Package Migration Starting',
+            '',
+            `**Repository:** \`${{ steps.repo-info.outputs.name }}\``,
+            batchInfo,
+            '',
+            'Migrating packages (npm, Maven, NuGet, etc.) to the target repository...'
+          ].filter(line => line !== '').join('\n');
+          
           await github.rest.issues.createComment({
             issue_number: ${{ inputs.issue_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `### 📦 Package Migration Starting
-            
-**Repository:** \`${{ steps.repo-info.outputs.name }}\`
-${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
-
-Migrating packages (npm, Maven, NuGet, etc.) to the target repository...`
+            body: message
           });
     
     - name: Install gh migrate-packages extension
@@ -72,22 +79,32 @@ Migrating packages (npm, Maven, NuGet, etc.) to the target repository...`
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
     
     - name: Report packages migration completion
-      if: always() && inputs.issue_number != ''
+      if: ${{ always() && inputs.issue_number != '' }}
       uses: actions/github-script@v8
       with:
         script: |
           const success = '${{ steps.migrate.outputs.packages_status }}' === 'success';
           const icon = success ? '✅' : '❌';
           const status = success ? 'completed successfully' : 'failed';
+          const batchInfo = context.payload.inputs.batch_number ? 
+            `**Batch:** ${context.payload.inputs.batch_number}` : '';
+          
+          const statusMessage = success 
+            ? '✅ All packages have been migrated to the target repository.' 
+            : '⚠️ Please check the workflow logs for error details.';
+          
+          const message = [
+            `### ${icon} Package Migration ${status}`,
+            '',
+            `**Repository:** \`${{ steps.repo-info.outputs.name }}\``,
+            batchInfo,
+            '',
+            statusMessage
+          ].filter(line => line !== '').join('\n');
           
           await github.rest.issues.createComment({
             issue_number: ${{ inputs.issue_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `### ${icon} Package Migration ${status}
-            
-**Repository:** \`${{ steps.repo-info.outputs.name }}\`
-${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
-
-${success ? '✅ All packages have been migrated to the target repository.' : '⚠️ Please check the workflow logs for error details.'}`
+            body: message
           });

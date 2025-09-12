@@ -34,20 +34,27 @@ jobs:
         echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
     
     - name: Report releases migration start
-      if: inputs.issue_number != ''
+      if: ${{ inputs.issue_number != '' }}
       uses: actions/github-script@v8
       with:
         script: |
+          const batchInfo = context.payload.inputs.batch_number ? 
+            `**Batch:** ${context.payload.inputs.batch_number}` : '';
+          
+          const message = [
+            '### 🏷️ Releases Migration Starting',
+            '',
+            `**Repository:** \`${{ steps.repo-info.outputs.name }}\``,
+            batchInfo,
+            '',
+            'Migrating releases and tags to the target repository...'
+          ].filter(line => line !== '').join('\n');
+          
           await github.rest.issues.createComment({
             issue_number: ${{ inputs.issue_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `### 🏷️ Releases Migration Starting
-            
-**Repository:** \`${{ steps.repo-info.outputs.name }}\`
-${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
-
-Migrating releases and tags to the target repository...`
+            body: message
           });
     
     - name: Install gh migrate-releases extension
@@ -73,7 +80,7 @@ Migrating releases and tags to the target repository...`
         
         if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
           echo "releases_status=success" >> $GITHUB_OUTPUT
-          echo "releases_count=unknown" >> $GITHUB_OUTPUT  # Update if the tool provides count
+          echo "releases_count=unknown" >> $GITHUB_OUTPUT
         else
           echo "releases_status=failed" >> $GITHUB_OUTPUT
           echo "error_code=$MIGRATION_EXIT_CODE" >> $GITHUB_OUTPUT
@@ -84,23 +91,37 @@ Migrating releases and tags to the target repository...`
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
     
     - name: Report releases migration completion
-      if: always() && inputs.issue_number != ''
+      if: ${{ always() && inputs.issue_number != '' }}
       uses: actions/github-script@v8
       with:
         script: |
           const success = '${{ steps.migrate.outputs.releases_status }}' === 'success';
           const icon = success ? '✅' : '❌';
           const status = success ? 'completed successfully' : 'failed';
+          const batchInfo = context.payload.inputs.batch_number ? 
+            `**Batch:** ${context.payload.inputs.batch_number}` : '';
+          const errorCode = '${{ steps.migrate.outputs.error_code }}';
+          
+          let statusMessage = success 
+            ? '✅ All releases and tags have been migrated to the target repository.' 
+            : '⚠️ Please check the workflow logs for error details.';
+          
+          if (!success && errorCode) {
+            statusMessage += `\n**Error Code:** ${errorCode}`;
+          }
+          
+          const message = [
+            `### ${icon} Releases Migration ${status}`,
+            '',
+            `**Repository:** \`${{ steps.repo-info.outputs.name }}\``,
+            batchInfo,
+            '',
+            statusMessage
+          ].filter(line => line !== '').join('\n');
           
           await github.rest.issues.createComment({
             issue_number: ${{ inputs.issue_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `### ${icon} Releases Migration ${status}
-            
-**Repository:** \`${{ steps.repo-info.outputs.name }}\`
-${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
-
-${success ? '✅ All releases and tags have been migrated to the target repository.' : '⚠️ Please check the workflow logs for error details.'}
-${!success && '${{ steps.migrate.outputs.error_code }}' ? `\n**Error Code:** ${{ steps.migrate.outputs.error_code }}` : ''}`
-          });
+            body: message
+          })

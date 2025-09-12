@@ -34,20 +34,27 @@ jobs:
         echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
     
     - name: Report LFS migration start
-      if: inputs.issue_number != ''
+      if: ${{ inputs.issue_number != '' }}
       uses: actions/github-script@v8
       with:
         script: |
+          const batchInfo = context.payload.inputs.batch_number ? 
+            `**Batch:** ${context.payload.inputs.batch_number}` : '';
+          
+          const message = [
+            '### 📦 LFS Migration Starting',
+            '',
+            `**Repository:** \`${{ steps.repo-info.outputs.name }}\``,
+            batchInfo,
+            '',
+            'Migrating Git LFS objects to the target repository...'
+          ].filter(line => line !== '').join('\n');
+          
           await github.rest.issues.createComment({
             issue_number: ${{ inputs.issue_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `### 📦 LFS Migration Starting
-            
-**Repository:** \`${{ steps.repo-info.outputs.name }}\`
-${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
-
-Migrating Git LFS objects to the target repository...`
+            body: message
           });
     
     - name: Install gh migrate-lfs extension
@@ -72,23 +79,32 @@ Migrating Git LFS objects to the target repository...`
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
     
     - name: Report LFS migration completion
-      if: always() && inputs.issue_number != ''
+      if: ${{ always() && inputs.issue_number != '' }}
       uses: actions/github-script@v8
       with:
         script: |
           const success = '${{ steps.migrate.outputs.lfs_status }}' === 'success';
           const icon = success ? '✅' : '❌';
           const status = success ? 'completed successfully' : 'failed';
+          const batchInfo = context.payload.inputs.batch_number ? 
+            `**Batch:** ${context.payload.inputs.batch_number}` : '';
+          
+          const statusMessage = success 
+            ? '✅ All Git LFS objects have been migrated to the target repository.' 
+            : '⚠️ Please check the workflow logs for error details.';
+          
+          const message = [
+            `### ${icon} LFS Migration ${status}`,
+            '',
+            `**Repository:** \`${{ steps.repo-info.outputs.name }}\``,
+            batchInfo,
+            '',
+            statusMessage
+          ].filter(line => line !== '').join('\n');
           
           await github.rest.issues.createComment({
             issue_number: ${{ inputs.issue_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `### ${icon} LFS Migration ${status}
-            
-**Repository:** \`${{ steps.repo-info.outputs.name }}\`
-${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
-**Duration:** ${Math.round((Date.now() - ${{ job.started_at }} * 1000) / 60000)} minutes
-
-${success ? '✅ All Git LFS objects have been migrated to the target repository.' : '⚠️ Please check the workflow logs for error details.'}`
+            body: message
           });
