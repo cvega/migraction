@@ -115,11 +115,26 @@ jobs:
     if: always() && needs.prepare-migration-batches.result == 'success'
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Generate special features migration report
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const script = require('./.github/scripts/reporting/feature-report.js');
+            const hasFeatures = await script({github, context, core});
+            
+            if (!hasFeatures) {
+              console.log('No special features (LFS/packages/releases) were migrated');
+            } else {
+              console.log('Special features report posted to issue');
+            }
+      
       - name: Post migration completion summary
         uses: actions/github-script@v8
         env:
           BATCH_COUNT: ${{ needs.prepare-migration-batches.outputs.batch_count }}
           MIGRATION_TYPE: ${{ needs.prepare-migration-batches.outputs.migration_type }}
+          TARGET_ORG: ${{ inputs.TARGET_ORGANIZATION }}
         with:
           script: |
             const script = require('./.github/scripts/reporting/final-report.js');

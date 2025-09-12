@@ -111,7 +111,12 @@ jobs:
         with:
           workflow: post/lfs.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: '{"repository": "${{ matrix.repository }}"}'
+          inputs: |
+            {
+              "repository": "${{ matrix.repository }}",
+              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+              "batch_number": "${{ env.BATCH_NUMBER }}"
+            }
 
       - name: Trigger packages data migration
         if: steps.migration-checks.outputs.packages == 'true'
@@ -119,7 +124,12 @@ jobs:
         with:
           workflow: post/packages.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: '{"repository": "${{ matrix.repository }}"}'
+          inputs: |
+            {
+              "repository": "${{ matrix.repository }}",
+              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+              "batch_number": "${{ env.BATCH_NUMBER }}"
+            }
 
       - name: Trigger releases data migration
         if: steps.migration-checks.outputs.releases == 'true'
@@ -127,7 +137,12 @@ jobs:
         with:
           workflow: post/releases.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: '{"repo": "${{ steps.repo-info.outputs.path }}"}'
+          inputs: |
+            {
+              "repo": "${{ steps.repo-info.outputs.path }}",
+              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+              "batch_number": "${{ env.BATCH_NUMBER }}"
+            }
 
       - name: Map mannequin users to real accounts
         if: hashFiles('user-mappings-gei.csv') != ''

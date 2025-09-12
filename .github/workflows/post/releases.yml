@@ -7,6 +7,18 @@ on:
         description: 'Repository to migrate releases from'
         required: true
         type: string
+      issue_number:
+        description: 'Issue number for reporting'
+        required: true
+        type: string
+      batch_number:
+        description: 'Batch number for context'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
 
 jobs:
   migrate-releases:
@@ -15,16 +27,80 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Extract repository name
+      id: repo-info
+      run: |
+        REPO_NAME=$(basename "${{ inputs.repo }}")
+        echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
+    
+    - name: Report releases migration start
+      if: inputs.issue_number != ''
+      uses: actions/github-script@v8
+      with:
+        script: |
+          await github.rest.issues.createComment({
+            issue_number: ${{ inputs.issue_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `### 🏷️ Releases Migration Starting
+            
+**Repository:** \`${{ steps.repo-info.outputs.name }}\`
+${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
+
+Migrating releases and tags to the target repository...`
+          });
+    
     - name: Install gh migrate-releases extension
       run: gh extension install mona-actions/gh-migrate-releases
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
 
     - name: Migrate releases to target repository
+      id: migrate
       run: |
+        set +e  # Don't exit on error
+        
+        # Run the actual migration (uncomment for production)
         gh migrate-releases sync \
           --repository ${{ inputs.repo }} \
           --source-organization ${{ vars.SOURCE_ORGANIZATION }} \
           --source-token ${{ secrets.SOURCE_ADMIN_TOKEN }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
           --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
+        
+        # Capture exit code
+        MIGRATION_EXIT_CODE=$?
+        
+        if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
+          echo "releases_status=success" >> $GITHUB_OUTPUT
+          echo "releases_count=unknown" >> $GITHUB_OUTPUT  # Update if the tool provides count
+        else
+          echo "releases_status=failed" >> $GITHUB_OUTPUT
+          echo "error_code=$MIGRATION_EXIT_CODE" >> $GITHUB_OUTPUT
+        fi
+        
+        exit $MIGRATION_EXIT_CODE
+      env:
+        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+    
+    - name: Report releases migration completion
+      if: always() && inputs.issue_number != ''
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const success = '${{ steps.migrate.outputs.releases_status }}' === 'success';
+          const icon = success ? '✅' : '❌';
+          const status = success ? 'completed successfully' : 'failed';
+          
+          await github.rest.issues.createComment({
+            issue_number: ${{ inputs.issue_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `### ${icon} Releases Migration ${status}
+            
+**Repository:** \`${{ steps.repo-info.outputs.name }}\`
+${context.payload.inputs.batch_number ? `**Batch:** ${context.payload.inputs.batch_number}` : ''}
+
+${success ? '✅ All releases and tags have been migrated to the target repository.' : '⚠️ Please check the workflow logs for error details.'}
+${!success && '${{ steps.migrate.outputs.error_code }}' ? `\n**Error Code:** ${{ steps.migrate.outputs.error_code }}` : ''}`
+          });
