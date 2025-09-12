@@ -109,7 +109,7 @@ jobs:
         if: steps.migration-checks.outputs.lfs == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: post/lfs.yml
+          workflow: .github/workflows/post/lfs.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: |
             {
@@ -122,7 +122,7 @@ jobs:
         if: steps.migration-checks.outputs.packages == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: post/packages.yml
+          workflow: .github/workflows/post/packages.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: |
             {
@@ -135,7 +135,7 @@ jobs:
         if: steps.migration-checks.outputs.releases == 'true'
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: post/releases.yml
+          workflow: .github/workflows/post/releases.yml
           token: ${{ secrets.TARGET_ADMIN_TOKEN }}
           inputs: |
             {
