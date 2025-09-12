@@ -34,7 +34,7 @@ module.exports = async ({ github, context, core }) => {
 
   // If dry-run, filter to only repos with -dry-run suffix
   const reposToDelete = isDryRun 
-    ? repoNames.map(name => `${name}-dry-run`)
+    ? repoNames.map(name => `${name}`)
     : repoNames;
 
   // Set outputs for next steps - MUST BE STRINGS
