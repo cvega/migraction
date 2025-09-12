@@ -1,5 +1,3 @@
-// 
-
 module.exports = async ({github, context}) => {
     const batches = JSON.parse(process.env.BATCHES);
                 
@@ -10,9 +8,9 @@ module.exports = async ({github, context}) => {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 run_id: context.runId
-        });
+            });
         
-        return currentRun.status === 'cancelled' || currentRun.conclusion === 'cancelled';
+            return currentRun.status === 'cancelled' || currentRun.conclusion === 'cancelled';
         } catch (error) {
             console.log('Error checking cancellation status:', error.message);
             return false;
@@ -22,16 +20,25 @@ module.exports = async ({github, context}) => {
     // Function to check for cancel command in issue comments
     async function hasCancelCommand(issueNumber, sinceTime) {
         try {
-        const comments = await github.rest.issues.listComments({
-            issue_number: issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            since: sinceTime.toISOString()
-        });
-        
-        return comments.data.some(comment => 
-            comment.body.includes('/cancel-migration')
-        );
+            const comments = await github.rest.issues.listComments({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                since: sinceTime.toISOString()
+            });
+            
+            return comments.data.some(comment => {
+                // Skip bot comments (they might contain instructions with /cancel-migration)
+                if (comment.user.type === 'Bot' || comment.user.login === 'github-actions[bot]') {
+                    return false;
+                }
+                
+                // This avoids matching when /cancel-migration is just mentioned in text
+                const trimmedBody = comment.body.trim();
+                return trimmedBody === '/cancel-migration' || 
+                       trimmedBody.startsWith('/cancel-migration\n') ||
+                       trimmedBody.startsWith('/cancel-migration ');
+            });
         } catch (error) {
             console.log('Error checking for cancel command:', error.message);
             return false;
@@ -43,34 +50,34 @@ module.exports = async ({github, context}) => {
         console.log(`Cancelling all running workflows from batch ${fromBatchNumber} onwards...`);
         
         try {
-        const runs = await github.rest.actions.listWorkflowRuns({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'batch-processor.yml',
-            event: 'repository_dispatch',
-            status: 'queued'
-        });
-        
-        const inProgressRuns = await github.rest.actions.listWorkflowRuns({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'batch-processor.yml',
-            event: 'repository_dispatch',
-            status: 'in_progress'
-        });
-        
-        const allRuns = [...runs.data.workflow_runs, ...inProgressRuns.data.workflow_runs];
-        
-        for (const run of allRuns) {
-            await github.rest.actions.cancelWorkflowRun({
+            const runs = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                run_id: run.id
+                workflow_id: 'batch-processor.yml',
+                event: 'repository_dispatch',
+                status: 'queued'
             });
-            console.log(`Cancelled workflow run ${run.id}`);
-        }
+            
+            const inProgressRuns = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'batch-processor.yml',
+                event: 'repository_dispatch',
+                status: 'in_progress'
+            });
+            
+            const allRuns = [...runs.data.workflow_runs, ...inProgressRuns.data.workflow_runs];
+            
+            for (const run of allRuns) {
+                await github.rest.actions.cancelWorkflowRun({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    run_id: run.id
+                });
+                console.log(`Cancelled workflow run ${run.id}`);
+            }
         } catch (error) {
-        console.log('Error cancelling batch workflows:', error.message);
+            console.log('Error cancelling batch workflows:', error.message);
         }
     }
 
@@ -99,6 +106,8 @@ module.exports = async ({github, context}) => {
     }
 
     const startTime = new Date();
+    console.log(`Starting orchestration at ${startTime.toISOString()}`);
+    console.log(`Will check for cancellation commands issued after this time only`);
 
     for (let i = 0; i < batches.length; i++) {
         const batch = batches[i];
@@ -107,14 +116,19 @@ module.exports = async ({github, context}) => {
         const dispatchTime = new Date();
         
         // CHECK FOR CANCELLATION BEFORE EACH BATCH
-        if (await isWorkflowCancelled() || await hasCancelCommand(batch.issueNumber, startTime)) {
-        console.log('Cancellation detected! Stopping batch processing...');
+        const workflowCancelled = await isWorkflowCancelled();
+        const hasCancel = await hasCancelCommand(batch.issueNumber, startTime);
         
-        await github.rest.issues.createComment({
-            issue_number: batch.issueNumber,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `### 🛑 Migration Cancelled
+        console.log(`Batch ${batchNumber} - Workflow cancelled: ${workflowCancelled}, Cancel command found: ${hasCancel}`);
+        
+        if (workflowCancelled || hasCancel) {
+            console.log('Cancellation detected! Stopping batch processing...');
+            
+            await github.rest.issues.createComment({
+                issue_number: batch.issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `### 🛑 Migration Cancelled
 
 **Stopped at:** Batch ${batchNumber} of ${batches.length}
 
@@ -125,10 +139,10 @@ module.exports = async ({github, context}) => {
 | 🔄 Currently running | Will complete |
 
 > **Note:** Any migrations currently in progress will continue to completion. Check the [Actions tab](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions) for running workflows.`
-        });
-        
-        await cancelRunningBatches(batchNumber);
-        process.exit(0);
+            });
+            
+            await cancelRunningBatches(batchNumber);
+            process.exit(0);
         }
         
         console.log(`\n=== Dispatching Batch ${batchNumber} of ${batches.length} ===`);
@@ -160,35 +174,35 @@ ${batch.repositories.map((repo, index) => `${index + 1}. \`${repo}\``).join('\n'
         
         // Dispatch the batch workflow
         try {
-        const dispatchPayload = {
-            event_type: 'migration-batch',
-            client_payload: {
-                batch: batch,
-                orchestrator_run_id: context.runId
+            const dispatchPayload = {
+                event_type: 'migration-batch',
+                client_payload: {
+                    batch: batch,
+                    orchestrator_run_id: context.runId
+                }
+            };
+            
+            console.log('Dispatching batch with ID:', batchId);
+            
+            // Use fetch directly instead of octokit
+            const response = await fetch(`https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/dispatches`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${process.env.TARGET_ADMIN_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'GitHub Actions'
+                },
+                body: JSON.stringify(dispatchPayload)
+            });
+            
+            if (response.ok) {
+                console.log(`Successfully dispatched batch ${batchNumber} with ID ${batchId}`);
+            } else {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
-        };
-        
-        console.log('Dispatching batch with ID:', batchId);
-        
-        // Use fetch directly instead of octokit
-        const response = await fetch(`https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/dispatches`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${process.env.TARGET_ADMIN_TOKEN}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json',
-                'User-Agent': 'GitHub Actions'
-            },
-            body: JSON.stringify(dispatchPayload)
-        });
-        
-        if (response.ok) {
-            console.log(`Successfully dispatched batch ${batchNumber} with ID ${batchId}`);
-        } else {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-        
+            
         } catch (error) {
             console.log(`Failed to dispatch batch ${batchNumber}: ${error.message}`);
             
@@ -231,75 +245,78 @@ ${batch.repositories.map((repo, index) => `${index + 1}. \`${repo}\``).join('\n'
         await new Promise(resolve => setTimeout(resolve, 20000));
         
         while (!batchCompleted && attempts < maxAttempts) {
-        attempts++;
-        
-        // Check for cancellation every 5 iterations (2.5 minutes)
-        if (attempts % 5 === 0) {
-            if (await isWorkflowCancelled() || await hasCancelCommand(batch.issueNumber, startTime)) {
-            console.log('Cancellation detected during batch wait!');
+            attempts++;
             
-            await github.rest.issues.createComment({
-                issue_number: batch.issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `### 🛑 Migration Cancelled During Batch ${batchNumber}
+            // Check for cancellation every 5 iterations (2.5 minutes)
+            if (attempts % 5 === 0) {
+                const workflowCancelled = await isWorkflowCancelled();
+                const hasCancel = await hasCancelCommand(batch.issueNumber, startTime);
+                
+                if (workflowCancelled || hasCancel) {
+                    console.log('Cancellation detected during batch wait!');
+                    
+                    await github.rest.issues.createComment({
+                        issue_number: batch.issueNumber,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: `### 🛑 Migration Cancelled During Batch ${batchNumber}
 
 **Status:** Batch was in progress when cancellation was requested
 
 > **Note:** Currently running migrations in this batch will continue to completion. Check the [Actions tab](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions) for details.`
-            });
-            
-            await cancelRunningBatches(batchNumber);
-            process.exit(0);
-            }
-        }
-        
-        // Wait 30 seconds before checking
-        await new Promise(resolve => setTimeout(resolve, 30000));
-        
-        // Find the workflow run by batch ID
-        const workflowRun = await findWorkflowByBatchId(batchId);
-        
-        if (workflowRun) {
-            foundWorkflow = true;
-            
-            // Debug logging
-            if (attempts % 10 === 0 || attempts === 1) {
-                console.log(`Batch ${batchNumber} workflow status: ${workflowRun.status}, conclusion: ${workflowRun.conclusion}`);
-            }
-            
-            // Check if completed
-            if (workflowRun.status === 'completed') {
-                completedRun = workflowRun;
-                batchCompleted = true;
-                console.log(`Batch ${batchNumber} completed with conclusion: ${workflowRun.conclusion}`);
-                console.log(`Workflow URL: ${workflowRun.html_url}`);
-            }
-        } else {
-            // Workflow not found yet
-            if (!foundWorkflow && attempts > 6) {
-                console.log(`WARNING: Workflow for batch ${batchNumber} (ID: ${batchId}) not found after ${attempts * 30} seconds`);
-                if (attempts > 10) {
-                    console.log(`ERROR: Workflow not found after 5+ minutes. Moving to next batch.`);
-                    batchCompleted = true;
+                    });
+                    
+                    await cancelRunningBatches(batchNumber);
+                    process.exit(0);
                 }
             }
-        }
-        
-        // Status logging
-        if (!batchCompleted && attempts % 20 === 0) { // Every 10 minutes
-            const minutes = Math.round(attempts * 30 / 60);
-            const status = foundWorkflow ? 
-                `workflow ${workflowRun.status}` : 
-                'waiting for workflow to start';
-            console.log(`Batch ${batchNumber} still running... (${minutes} minutes, ${status})`);
             
-            if (attempts % 120 === 0) { // Every 60 minutes
-            await github.rest.issues.createComment({
-                issue_number: batch.issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `### ⏳ Batch ${batchNumber} Still Processing
+            // Wait 30 seconds before checking
+            await new Promise(resolve => setTimeout(resolve, 30000));
+            
+            // Find the workflow run by batch ID
+            const workflowRun = await findWorkflowByBatchId(batchId);
+            
+            if (workflowRun) {
+                foundWorkflow = true;
+                
+                // Debug logging
+                if (attempts % 10 === 0 || attempts === 1) {
+                    console.log(`Batch ${batchNumber} workflow status: ${workflowRun.status}, conclusion: ${workflowRun.conclusion}`);
+                }
+                
+                // Check if completed
+                if (workflowRun.status === 'completed') {
+                    completedRun = workflowRun;
+                    batchCompleted = true;
+                    console.log(`Batch ${batchNumber} completed with conclusion: ${workflowRun.conclusion}`);
+                    console.log(`Workflow URL: ${workflowRun.html_url}`);
+                }
+            } else {
+                // Workflow not found yet
+                if (!foundWorkflow && attempts > 6) {
+                    console.log(`WARNING: Workflow for batch ${batchNumber} (ID: ${batchId}) not found after ${attempts * 30} seconds`);
+                    if (attempts > 10) {
+                        console.log(`ERROR: Workflow not found after 5+ minutes. Moving to next batch.`);
+                        batchCompleted = true;
+                    }
+                }
+            }
+            
+            // Status logging
+            if (!batchCompleted && attempts % 20 === 0) { // Every 10 minutes
+                const minutes = Math.round(attempts * 30 / 60);
+                const status = foundWorkflow ? 
+                    `workflow ${workflowRun.status}` : 
+                    'waiting for workflow to start';
+                console.log(`Batch ${batchNumber} still running... (${minutes} minutes, ${status})`);
+                
+                if (attempts % 120 === 0) { // Every 60 minutes
+                    await github.rest.issues.createComment({
+                        issue_number: batch.issueNumber,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: `### ⏳ Batch ${batchNumber} Still Processing
 
 **Elapsed time:** ${minutes} minutes
 **Status:** ${status}
@@ -314,10 +331,10 @@ Large repositories or those with extensive history may take longer to migrate. T
 
 </details>
 
-💡 **Tip:** You can cancel this migration by commenting \`/cancel-migration\``
-            });
+💡 **Tip:** You can cancel this migration by commenting \`/cancel-migration\` (as a standalone command, not in a sentence)`
+                    });
+                }
             }
-        }
         }
         
         // Post completion comment

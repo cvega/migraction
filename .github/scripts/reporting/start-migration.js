@@ -1,6 +1,5 @@
 // FILE: .github/scripts/reporting/start-migration.js
-// PURPOSE: Posts a fancy migration start notification
-// NEW FILE - Add to .github/scripts/reporting/
+// PURPOSE: Posts a fancy migration start notification with realistic time estimates
 
 module.exports = async ({ github, context }) => {
     const migrationType = process.env.MIGRATION_TYPE;
@@ -66,7 +65,7 @@ module.exports = async ({ github, context }) => {
         
         body += `**Impact on users:**\n`;
         body += `- ⛔ Users cannot push to source repos during migration\n`;
-        body += `- ⏱️ Each repository may be locked for several minutes\n`;
+        body += `- ⏱️ Each repository may be locked for 10-15 minutes\n`;
         body += `- 📧 Ensure your team has been notified\n\n`;
         
         body += `> ⚠️ **Warning:** Only proceed if you've completed a successful dry-run!\n\n`;
@@ -74,21 +73,37 @@ module.exports = async ({ github, context }) => {
     
     body += `---\n\n`;
     
-    // Timeline section
+    // Timeline section with realistic estimates
     body += `## ⏱️ Estimated Timeline\n\n`;
     
     const reposPerBatch = Math.min(parseInt(batchSize), parseInt(totalRepos));
-    const estimatedMinutesPerRepo = isDryRun ? 2 : 3;
-    const estimatedMinutesPerBatch = reposPerBatch * estimatedMinutesPerRepo;
+    
+    // Updated realistic estimates based on actual observations
+    const estimatedMinutesPerRepo = isDryRun ? 8 : 10;  // 8 min for dry-run, 10 min for production
+    
+    // For parallel processing within a batch (max-parallel: 10)
+    const parallelFactor = Math.min(10, reposPerBatch);
+    const estimatedMinutesPerBatch = Math.ceil((reposPerBatch / parallelFactor) * estimatedMinutesPerRepo);
     const totalEstimatedMinutes = estimatedMinutesPerBatch * parseInt(batchCount);
+    
+    // Add buffer for overhead (setup, teardown, reporting)
+    const overheadMinutes = parseInt(batchCount) * 2;  // 2 minutes overhead per batch
+    const totalWithOverhead = totalEstimatedMinutes + overheadMinutes;
     
     body += `Based on ${totalRepos} repositories in ${batchCount} batch${batchCount !== '1' ? 'es' : ''}:\n\n`;
     body += `| Phase | Estimated Time |\n`;
     body += `|-------|---------------|\n`;
     body += `| Per Repository | ~${estimatedMinutesPerRepo} minutes |\n`;
-    body += `| Per Batch | ~${estimatedMinutesPerBatch} minutes |\n`;
-    body += `| **Total Migration** | **~${totalEstimatedMinutes} minutes** (${Math.round(totalEstimatedMinutes/60 * 10) / 10} hours) |\n\n`;
-    body += `> ⏱️ *Note: Actual times vary based on repository size and complexity*\n\n`;
+    body += `| Per Batch (${Math.min(parallelFactor, reposPerBatch)} parallel) | ~${estimatedMinutesPerBatch} minutes |\n`;
+    body += `| Setup/Reporting | ~${overheadMinutes} minutes total |\n`;
+    body += `| **Total Migration** | **~${totalWithOverhead} minutes** (${(totalWithOverhead/60).toFixed(1)} hours) |\n\n`;
+    
+    // Add notes about timing variability
+    body += `> ⏱️ **Note: Times vary based on:**\n`;
+    body += `> - Repository size and history depth\n`;
+    body += `> - Number of issues, PRs, and releases\n`;
+    body += `> - Network conditions and API rate limits\n`;
+    body += `> - Git LFS data and package migrations\n\n`;
     
     body += `---\n\n`;
     

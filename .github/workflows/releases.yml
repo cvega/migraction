@@ -103,7 +103,7 @@ jobs:
           const errorCode = '${{ steps.migrate.outputs.error_code }}';
           
           let statusMessage = success 
-            ? '✅ All releases and tags have been migrated to the target repository.' 
+            ? 'All releases and tags have been migrated to the target repository.' 
             : '⚠️ Please check the workflow logs for error details.';
           
           if (!success && errorCode) {
