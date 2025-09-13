@@ -13,7 +13,7 @@ Transform your GitHub migration experience with our automated, issue-driven syst
 | Feature | Description |
 |---------|------------|
 | 📋 **Issue-Driven Workflow** | Create an issue, list your repos, and let automation handle the rest |
-| 📦 **Smart Batching** | Automatically splits large migrations into manageable chunks (max 250 due to Actions matrix limit) |
+| 📦 **Smart Batching** | Automatically splits large migrations into manageable chunks (250 repos/batch) |
 | 🔄 **Sequential Processing** | Reliable batch-by-batch execution with progress tracking |
 | 🧪 **Dry-Run Support** | Test migrations safely before production |
 | 🔒 **Production Mode** | Secure migration with source repository locking |
@@ -30,7 +30,8 @@ Transform your GitHub migration experience with our automated, issue-driven syst
 - ✅ GitHub Enterprise Cloud organization (target)
 - ✅ Admin access to source and target
 - ✅ Personal Access Tokens (PATs)
-- ✅ Storage backend (Azure Blob or AWS S3)
+- ✅ Storage backend (Azure Blob or AWS S3) - optional but recommended
+- ✅ Self-hosted runners (for batch processing)
 
 ### 🔧 Setup Instructions
 
@@ -53,7 +54,7 @@ Navigate to **Settings** → **Secrets and variables** → **Actions**
 | `SOURCE_ADMIN_TOKEN` | PAT for source with `repo`, `admin:org` scopes | ✅ |
 | `AZURE_STORAGE_CONNECTION_STRING` | Azure storage connection string | Choose one |
 | `AWS_ACCESS_KEY_ID` | AWS access key | storage option |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key |  |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key | (optional) |
 
 #### 3️⃣ **Configure Variables** ⚙️
 
@@ -62,6 +63,7 @@ Navigate to **Settings** → **Secrets and variables** → **Actions** → **Var
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `TARGET_ORGANIZATION` | Target GitHub org name | `my-company` |
+| `SOURCE_ORGANIZATION` | Source org (for releases) | `old-company` |
 | `INSTALL_PREREQS` | Auto-install dependencies | `true` |
 | `AWS_REGION` | AWS region (if using S3) | `us-east-1` |
 | `AWS_BUCKET_NAME` | S3 bucket name (if using S3) | `migrations` |
@@ -76,13 +78,14 @@ Create these CSV files in your repository root:
 **`lfs.csv`** - Repositories requiring LFS migration
 ```csv
 repository
-https://github.example.com/org/repo-with-lfs
+repo-with-lfs
+another-lfs-repo
 ```
 
 **`packages.csv`** - Repositories with packages
 ```csv
 repository
-https://github.example.com/org/repo-with-packages
+repo-with-packages
 ```
 
 **`user-mappings-gei.csv`** - Map mannequins to real users
@@ -91,6 +94,8 @@ source,target
 old-username,new-username
 ```
 
+**Note**: LFS/packages/releases migrations are scaffolded but need uncommenting in workflow files for production use.
+
 </details>
 
 ## 🚀 Running Your Migration
@@ -98,17 +103,17 @@ old-username,new-username
 ### Step 1: Create Migration Issue 📝
 
 1. Go to **Issues** → **New Issue**
-2. Select **"GHES/GHEC repos to GitHub migration [GEI]"** template
+2. Select **"🚀 Migrate Repositories to GitHub Enterprise Cloud"** template
 3. Add your repositories:
 
 ```markdown
 <details>
-<summary>Click to expand repository list</summary>
+<summary>📋 Repository List (click to expand)</summary>
 
 https://github.example.com/org/repo1
 https://github.example.com/org/repo2
 https://github.example.com/org/repo3
-<!-- Add all your repositories here -->
+<!-- Add up to 1000 repositories -->
 
 </details>
 ```
@@ -120,7 +125,7 @@ https://github.example.com/org/repo3
 
 The system will automatically comment with:
 - ✅ Number of repositories detected
-- 📦 Batch breakdown (if >250 repos total - limited by GitHub Actions matrix)
+- 📦 Batch breakdown (250 repos per batch)
 - 🎯 Target organization confirmation
 - 👁️ Visibility settings
 
@@ -133,7 +138,7 @@ Add a comment to your issue:
 /run-dry-run-migration
 ```
 - ✅ Safe, non-destructive test
-- ✅ Creates test repos with `-dry-run-timestamp` suffix
+- ✅ Creates test repos (GEI handles naming)
 - ✅ Source remains unlocked
 
 #### 🚀 **Production Migration**
@@ -141,7 +146,7 @@ Add a comment to your issue:
 /run-production-migration
 ```
 - ⚠️ Locks source repositories
-- ✅ Creates repos with original names
+- ✅ Creates production repos
 - ✅ Run after successful dry-run
 
 ### Step 4: Monitor Progress 📊
@@ -149,14 +154,18 @@ Add a comment to your issue:
 Watch real-time updates in your issue:
 
 ```
-🚀 Starting Dry-Run migration with 10 sequential batches
-📦 Batch Size: 250 repositories per batch (GitHub Actions matrix limit)
-⏱️ Processing: Sequential (one batch at a time)
+🚀 Batch 1 of 10 Starting
+📦 Repositories in this batch: 250
+🔄 Migration type: dry-run
+🎯 Target organization: `my-company`
 
-➡️ Starting batch 1 of 10 (250 repositories)
-✅ Batch 1 of 10 completed: success
-➡️ Starting batch 2 of 10 (250 repositories)
-...
+➡️ Track batch progress in Actions tab
+
+✅ Batch 1 of 10 Complete
+🎉 Status: SUCCESS
+⏱️ Duration: 250 minutes
+
+📥 Next: Preparing batch 2...
 ```
 
 ### Step 5: Post-Migration 🎉
@@ -166,17 +175,17 @@ After successful migration:
 - 🔍 Verify all repositories
 - 👥 Update team access
 - 🔧 Configure CI/CD
-- 📢 Notify your teams
+- 🧹 Clean up dry-run repos with `/delete-dry-run`
 
 ## 🎛️ Advanced Configuration
 
 ### ⚙️ Customize Batch Size
 
-Edit workflow configuration for your needs (pre-configured to maximums):
+Edit workflow configuration for your needs:
 
 ```yaml
 # .github/workflows/trigger.yml
-BATCH_SIZE: 256  # Maximum allowed by GitHub Actions matrix (256 limit)
+BATCH_SIZE: 250  # Max 256 (GitHub Actions matrix limit)
 ```
 
 ### 🔄 Parallel Processing
@@ -185,7 +194,7 @@ Control concurrent migrations per batch:
 
 ```yaml
 # .github/workflows/batch-processor.yml
-max-parallel: 10  # Maximum allowed by GitHub GEI tool (10 limit)
+max-parallel: 10  # Max 10 (GEI concurrent limit)
 ```
 
 ### ⏱️ Timeout Configuration
@@ -193,7 +202,14 @@ max-parallel: 10  # Maximum allowed by GitHub GEI tool (10 limit)
 For large repositories:
 
 ```yaml
-timeout-minutes: 50400  # Maximum allowed by GitHub Actions, (35 day limit)
+timeout-minutes: 50400  # 35 days (GitHub Actions max)
+```
+
+### 🏃 Runner Configuration
+
+```yaml
+# .github/workflows/batch-processor.yml
+runs-on: self-hosted  # Or ubuntu-latest for GitHub-hosted
 ```
 
 ## 🛠️ Troubleshooting
@@ -216,7 +232,7 @@ timeout-minutes: 50400  # Maximum allowed by GitHub Actions, (35 day limit)
 
 **Steps:**
 1. Check Actions tab for error details
-2. Verify runner availability
+2. Verify runner availability (if self-hosted)
 3. Check API rate limits
 4. Re-run failed batch from Actions
 
@@ -225,10 +241,10 @@ timeout-minutes: 50400  # Maximum allowed by GitHub Actions, (35 day limit)
 <details>
 <summary>🔵 Missing LFS/Packages</summary>
 
-**Verify:**
-- CSV files are properly formatted
-- Source repo contains expected data
-- Check post-migration workflow logs
+**Note:** These features need activation:
+1. Edit workflow files (lfs.yml, packages.yml, releases.yml)
+2. Uncomment the migration commands
+3. Ensure CSV files exist with repo names
 
 </details>
 
@@ -237,6 +253,11 @@ timeout-minutes: 50400  # Maximum allowed by GitHub Actions, (35 day limit)
 **Cancel in-progress migration:**
 ```
 /cancel-migration
+```
+
+**Clean up test repositories:**
+```
+/delete-dry-run
 ```
 
 **Re-run specific batch:**
@@ -270,15 +291,6 @@ timeout-minutes: 50400  # Maximum allowed by GitHub Actions, (35 day limit)
 ### 💾 Data Handling
 - 🗄️ Temporary storage in configured backend
 - 🧹 Clean up after successful migration
-- 🔐 Consider encryption for sensitive repos
-
-## 🤝 Contributing
-
-We welcome contributions! Please:
-- 🧪 Test with dry-run migrations
-- 📚 Update documentation
-- 🎨 Follow existing patterns
-- 🐛 Report issues with details
 
 ## 📞 Support
 
@@ -317,7 +329,7 @@ graph TB
     end
     
     subgraph PROCESS["<b>⚡ Batch Processing</b>"]
-        L --> M["🏭 Batch Processor<br/><i>Workflow runner</i>"]:::processor
+        L --> M["🏭 Batch Processor<br/><i>Self-hosted runner</i>"]:::processor
         M --> N["🔀 Parallel Migration<br/><i>10 repos concurrent</i>"]:::parallel
         N --> O["🛠️ GEI CLI<br/><i>Core migration tool</i>"]:::gei
         O --> P{"📎 Extra Data?"}:::decision
@@ -381,7 +393,7 @@ sequenceDiagram
     rect rgb(254, 243, 199)
         U->>I: /run-dry-run
         I->>+O: Start
-        O->>O: 📦 Batch
+        O->>O: 📦 Batch (250 each)
     end
     
     rect rgb(237, 233, 254)
@@ -405,6 +417,17 @@ sequenceDiagram
     end
 ```
 
+## ⏱️ Performance at Scale
+
+| Scale | Repositories | Batches | Est. Time | Parallel Factor |
+|-------|-------------|---------|-----------|-----------------|
+| Small | 10 | 1 | ~10 min | 10x |
+| Medium | 250 | 1 | ~250 min | 10x |
+| Large | 1000 | 4 | ~17 hours | 10x |
+| Enterprise | 8000 | 32 | ~5.5 days | 10x |
+
+**Time Formula**: `(repos_per_batch ÷ 10 parallel) × 10 min/repo + 2 min overhead`
+
 ---
 
 <div align="center">
@@ -412,5 +435,7 @@ sequenceDiagram
 **🎯 Built for Scale** | **🔧 Self-Service Ready** | **📊 Full Visibility**
 
 Made with ❤️ for GitHub Enterprise migrations
+
+[Documentation](https://docs.github.com/en/migrations) | [Support](https://support.github.com) | [GEI CLI](https://github.com/github/gh-gei)
 
 </div>
