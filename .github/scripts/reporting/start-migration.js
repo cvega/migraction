@@ -1,6 +1,3 @@
-// FILE: .github/scripts/reporting/start-migration.js
-// PURPOSE: Posts a fancy migration start notification with realistic time estimates
-
 module.exports = async ({ github, context }) => {
     const migrationType = process.env.MIGRATION_TYPE;
     const batchCount = process.env.BATCH_COUNT;

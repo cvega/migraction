@@ -1,4 +1,4 @@
-module.exports = async ({context, core}) => {
+module.exports = async ({ context, core }) => {
     const repoText = process.env.REPOS.trim();
     const cleanedText = repoText
         .replace(/<details[^>]*>/gi, '')
@@ -11,10 +11,10 @@ module.exports = async ({context, core}) => {
         .split('\n')
         .map(line => line.trim())
         .filter(line => {
-        if (!line) return false;
-        if (line.includes('<') && line.includes('>')) return false;
-        if (line.startsWith('#') && !line.includes('://')) return false;
-        return line.includes('://') || line.includes('github.');
+            if (!line) return false;
+            if (line.includes('<') && line.includes('>')) return false;
+            if (line.startsWith('#') && !line.includes('://')) return false;
+            return line.includes('://') || line.includes('github.');
         });
 
     const batchSize = parseInt(process.env.BATCH_SIZE) || 5;
@@ -25,7 +25,7 @@ module.exports = async ({context, core}) => {
         const start = i * batchSize;
         const end = Math.min(start + batchSize, repos.length);
         const batch = repos.slice(start, end);
-        
+
         const batchData = {
             batchNumber: i + 1,
             repositories: batch,
@@ -39,7 +39,7 @@ module.exports = async ({context, core}) => {
             totalBatches: batchCount,
             totalRepos: repos.length
         };
-                
+
         batches.push(batchData);
     }
 

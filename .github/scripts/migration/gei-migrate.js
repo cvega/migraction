@@ -70,7 +70,7 @@ Options:
 function exec(command, args) {
   return new Promise((resolve, reject) => {
     console.log(`Executing: ${command} ${args.join(' ')}`);
-    
+
     const child = spawn(command, args, {
       stdio: ['inherit', 'pipe', 'pipe'],
       shell: false
@@ -108,7 +108,7 @@ function exec(command, args) {
 async function execAndGetMigrationID(command, args) {
   try {
     const { stdout } = await exec(command, args);
-    
+
     // Extract migration ID using same pattern as PowerShell
     const match = stdout.match(/\(ID: (.+)\)/);
     if (match && match[1]) {
@@ -200,15 +200,15 @@ async function main() {
   try {
     // Queue the migration
     const migrationId = await execAndGetMigrationID('gei', geiArgs);
-    
+
     if (migrationId) {
       console.log(`Queued migration of repository ${repoName} with ID ${migrationId}`);
       console.log('Waiting for migration to complete...');
-      
+
       // Wait for migration to complete
       await exec('gei', ['wait-for-migration', '--migration-id', migrationId]);
       console.log('Migration completed successfully');
-      
+
       // Set output for GitHub Actions (if running in Actions)
       if (process.env.GITHUB_OUTPUT) {
         const fs = require('fs');
@@ -221,13 +221,13 @@ async function main() {
     }
   } catch (error) {
     console.error(`Error processing repository ${params.repository}:`, error.message);
-    
+
     // Set failure output for GitHub Actions
     if (process.env.GITHUB_OUTPUT) {
       const fs = require('fs');
       fs.appendFileSync(process.env.GITHUB_OUTPUT, `status=failed\n`);
     }
-    
+
     process.exit(1);
   }
 }

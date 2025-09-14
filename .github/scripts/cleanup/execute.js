@@ -18,7 +18,7 @@ module.exports = async ({ github, context, core }) => {
   for (const repoName of repoNames) {
     try {
       console.log(`Attempting to delete ${targetOrg}/${repoName}...`);
-      
+
       // First check if repo exists
       const checkResponse = await fetch(`https://api.github.com/repos/${targetOrg}/${repoName}`, {
         method: 'GET',
@@ -56,10 +56,10 @@ module.exports = async ({ github, context, core }) => {
         const errorText = await deleteResponse.text();
         throw new Error(`Delete failed: ${deleteResponse.status} - ${errorText}`);
       }
-      
+
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
     } catch (error) {
       console.error(`Failed to delete ${repoName}:`, error.message);
       results.failed.push({
@@ -74,9 +74,9 @@ module.exports = async ({ github, context, core }) => {
   const successCount = results.successful.length;
   const failCount = results.failed.length;
   const notFoundCount = results.notFound.length;
-  
+
   console.log(`Deletion complete: ${successCount} successful, ${failCount} failed, ${notFoundCount} not found`);
-  
+
   let summaryBody = `## 🗑️ Repository Deletion Complete
 
 ### Summary
@@ -149,7 +149,7 @@ Your dry-run repositories have been cleaned up. You can now:
   core.setOutput('deleted_count', successCount.toString());
   core.setOutput('failed_count', failCount.toString());
   core.setOutput('not_found_count', notFoundCount.toString());
-  
+
   // Fail the workflow if there were failures
   if (failCount > 0) {
     core.setFailed(`Failed to delete ${failCount} repositories`);

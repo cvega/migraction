@@ -7,7 +7,7 @@ module.exports = async ({ github, context, core }) => {
 
   while (new Date() - startTime < timeout) {
     await new Promise(resolve => setTimeout(resolve, checkInterval));
-    
+
     // Get recent comments
     const comments = await github.rest.issues.listComments({
       issue_number: context.issue.number,
@@ -15,18 +15,18 @@ module.exports = async ({ github, context, core }) => {
       repo: context.repo.repo,
       since: startTime.toISOString()
     });
-    
+
     // Check for confirmation from the same user who initiated
-    const confirmComment = comments.data.find(comment => 
+    const confirmComment = comments.data.find(comment =>
       comment.body.includes('/confirm-delete') &&
       comment.user.login === context.payload.comment.user.login
     );
-    
+
     const cancelComment = comments.data.find(comment =>
       comment.body.includes('/cancel-delete') &&
       comment.user.login === context.payload.comment.user.login
     );
-    
+
     if (cancelComment) {
       core.setOutput('confirmed', 'false');
       await github.rest.issues.createComment({
@@ -37,7 +37,7 @@ module.exports = async ({ github, context, core }) => {
       });
       return;
     }
-    
+
     if (confirmComment) {
       core.setOutput('confirmed', 'true');
       console.log('Deletion confirmed by user');

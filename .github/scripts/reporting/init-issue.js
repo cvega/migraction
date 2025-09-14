@@ -1,10 +1,10 @@
-module.exports = async ({github, context}) => {
+module.exports = async ({ github, context }) => {
     // Handle visibility formatting
     const visibility = process.env.VISIBILITY === 'None' ? 'Private' : process.env.VISIBILITY;
 
     // Get and parse repositories
     const repoText = process.env.REPOSITORIES || '';
-    
+
     console.log('=== DEBUG REPOSITORIES ===');
     console.log('REPOSITORIES exists:', !!process.env.REPOSITORIES);
     console.log('Length:', repoText.length);
@@ -42,23 +42,23 @@ module.exports = async ({github, context}) => {
         visibility,
         context
     });
-    
+
     // Check if this is a large batch migration
     const labelsResponse = await github.rest.issues.listLabelsOnIssue({
         issue_number: context.issue.number,
         owner: context.repo.owner,
         repo: context.repo.repo
     });
-    
+
     const labels = labelsResponse.data.map(label => label.name);
     const isGEIMigration = labels.some(label => label.includes('gei'));
     const isLargeBatch = numberOfRepositories > 200;
-    
+
     // Add batch processing info if needed
-    const finalComment = isGEIMigration && isLargeBatch 
+    const finalComment = isGEIMigration && isLargeBatch
         ? appendBatchInfo(commentBody, numberOfRepositories)
         : commentBody;
-                
+
     // Post the comment
     await github.rest.issues.createComment({
         issue_number: context.issue.number,
@@ -142,7 +142,7 @@ Once you've validated the dry-run and notified your team, proceed with the produ
 // Helper function to append batch processing information
 function appendBatchInfo(commentBody, numberOfRepositories) {
     const batches = Math.ceil(numberOfRepositories / 200);
-    
+
     return `${commentBody}
 
 ---

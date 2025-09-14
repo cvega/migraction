@@ -4,9 +4,9 @@ module.exports = async ({ github, context, core }) => {
   const isDryRun = process.env.IS_DRY_RUN === 'true';
 
   // Extract repository field - handle different possible field names
-  const repositories = repoData._repositories || 
-                       repoData._repositories_to_migrate || 
-                       repoData.repositories || '';
+  const repositories = repoData._repositories ||
+    repoData._repositories_to_migrate ||
+    repoData.repositories || '';
 
   // Parse repositories from the text
   const cleanedText = repositories
@@ -33,7 +33,7 @@ module.exports = async ({ github, context, core }) => {
   });
 
   // If dry-run, filter to only repos with -dry-run suffix
-  const reposToDelete = isDryRun 
+  const reposToDelete = isDryRun
     ? repoNames.map(name => `${name}`)
     : repoNames;
 
@@ -77,11 +77,10 @@ ${reposToDelete.map((repo, index) => `${index + 1}. \`${targetOrg}/${repo}\``).j
 
 ---
 
-**${warningLevel} WARNING:** This action is **IRREVERSIBLE**. ${
-    isDryRun 
+**${warningLevel} WARNING:** This action is **IRREVERSIBLE**. ${isDryRun
       ? 'These are test repositories from your dry-run migration.'
       : '⚠️ These are PRODUCTION repositories. All data will be permanently lost!'
-  }
+    }
 
 To confirm deletion, reply with:
 \`\`\`
