@@ -61,6 +61,13 @@ jobs:
       run: gh extension install mona-actions/gh-migrate-lfs
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+
+    - name: Prepare LFS migration
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const script = require('./.github/scripts/filters/lfs.js');
+          return await script({github, context});
     
     - name: Migrate LFS objects to target repository
       id: migrate

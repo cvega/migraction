@@ -84,7 +84,7 @@ jobs:
         id: migration-checks
         run: |
           # Check LFS
-          if node .github/scripts/migration/check-repo.cjs lfs.csv "${{ matrix.repository }}" | grep -q "found=true"; then
+          if CLONE_URL="${{ matrix.repository }}" LFS_CSV_PATH="lfs.csv" node .github/scripts/filters/lfs.js check | grep -q "found=true"; then
             echo "lfs=true" >> $GITHUB_OUTPUT
           else
             echo "lfs=false" >> $GITHUB_OUTPUT

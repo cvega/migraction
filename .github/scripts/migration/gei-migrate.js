@@ -109,7 +109,7 @@ async function execAndGetMigrationID(command, args) {
   try {
     const { stdout } = await exec(command, args);
 
-    // Extract migration ID using same pattern as PowerShell
+    // Extract migration ID
     const match = stdout.match(/\(ID: (.+)\)/);
     if (match && match[1]) {
       return match[1].trim();
