@@ -11,11 +11,12 @@ module.exports = async ({ github, context, core }) => {
         per_page: 100
     });
 
-    // Parse comments to find LFS, packages, and releases migrations
+    // Parse comments to find LFS, packages, releases, and variables/secrets migrations
     const features = {
         lfs: { started: [], completed: [], failed: [] },
         packages: { started: [], completed: [], failed: [] },
-        releases: { started: [], completed: [], failed: [] }
+        releases: { started: [], completed: [], failed: [] },
+        variablesSecrets: { started: [], completed: [], failed: [] }
     };
 
     comments.data.forEach(comment => {
@@ -62,13 +63,48 @@ module.exports = async ({ github, context, core }) => {
                 features.releases.failed.push(repo);
             }
         }
+
+        // Check for Variables/Secrets migrations
+        if (body.includes('Variables/Secrets Migration')) {
+            const repoMatch = body.match(/\*\*Repository:\*\* `([^`]+)`/);
+            const repo = repoMatch ? repoMatch[1] : 'unknown';
+
+            if (body.includes('Variables/Secrets Migration Starting')) {
+                features.variablesSecrets.started.push(repo);
+            } else if (body.includes('✅ Variables/Secrets Migration completed successfully')) {
+                features.variablesSecrets.completed.push(repo);
+            } else if (body.includes('⚠️ Variables/Secrets Migration completed with warnings')) {
+                // Count partial success as completed but track separately if needed
+                features.variablesSecrets.completed.push(repo);
+            } else if (body.includes('❌ Variables/Secrets Migration failed')) {
+                features.variablesSecrets.failed.push(repo);
+            }
+        }
     });
 
     // Generate summary
     let summaryBody = `## 📊 Special Features Migration Summary\n\n`;
+    let hasAnyFeatures = false;
+
+    // Variables/Secrets Summary
+    if (features.variablesSecrets.started.length > 0) {
+        hasAnyFeatures = true;
+        summaryBody += `### 🔐 Variables/Secrets Migrations\n`;
+        summaryBody += `| Status | Count | Repositories |\n`;
+        summaryBody += `|--------|-------|-------------|\n`;
+        summaryBody += `| ✅ Completed | ${features.variablesSecrets.completed.length} | ${features.variablesSecrets.completed.join(', ') || 'None'} |\n`;
+        summaryBody += `| ❌ Failed | ${features.variablesSecrets.failed.length} | ${features.variablesSecrets.failed.join(', ') || 'None'} |\n`;
+        summaryBody += `| ⏳ In Progress | ${features.variablesSecrets.started.length - features.variablesSecrets.completed.length - features.variablesSecrets.failed.length} | - |\n\n`;
+
+        // Add note about manual secret updates
+        if (features.variablesSecrets.completed.length > 0) {
+            summaryBody += `> **Note:** Placeholder secrets have been created. Please update them with actual values in the target repositories.\n\n`;
+        }
+    }
 
     // LFS Summary
     if (features.lfs.started.length > 0) {
+        hasAnyFeatures = true;
         summaryBody += `### 📦 Git LFS Migrations\n`;
         summaryBody += `| Status | Count | Repositories |\n`;
         summaryBody += `|--------|-------|-------------|\n`;
@@ -79,6 +115,7 @@ module.exports = async ({ github, context, core }) => {
 
     // Packages Summary
     if (features.packages.started.length > 0) {
+        hasAnyFeatures = true;
         summaryBody += `### 📦 Package Migrations\n`;
         summaryBody += `| Status | Count | Repositories |\n`;
         summaryBody += `|--------|-------|-------------|\n`;
@@ -89,6 +126,7 @@ module.exports = async ({ github, context, core }) => {
 
     // Releases Summary
     if (features.releases.started.length > 0) {
+        hasAnyFeatures = true;
         summaryBody += `### 🏷️ Releases Migrations\n`;
         summaryBody += `| Status | Count | Repositories |\n`;
         summaryBody += `|--------|-------|-------------|\n`;
@@ -97,8 +135,40 @@ module.exports = async ({ github, context, core }) => {
         summaryBody += `| ⏳ In Progress | ${features.releases.started.length - features.releases.completed.length - features.releases.failed.length} | - |\n\n`;
     }
 
+    // Calculate totals
+    if (hasAnyFeatures) {
+        const totalStarted = features.variablesSecrets.started.length +
+            features.lfs.started.length +
+            features.packages.started.length +
+            features.releases.started.length;
+
+        const totalCompleted = features.variablesSecrets.completed.length +
+            features.lfs.completed.length +
+            features.packages.completed.length +
+            features.releases.completed.length;
+
+        const totalFailed = features.variablesSecrets.failed.length +
+            features.lfs.failed.length +
+            features.packages.failed.length +
+            features.releases.failed.length;
+
+        summaryBody += `---\n\n`;
+        summaryBody += `### 📈 Overall Summary\n\n`;
+        summaryBody += `| Feature | Started | Completed | Failed |\n`;
+        summaryBody += `|---------|---------|-----------|--------|\n`;
+        summaryBody += `| Variables/Secrets | ${features.variablesSecrets.started.length} | ${features.variablesSecrets.completed.length} | ${features.variablesSecrets.failed.length} |\n`;
+        summaryBody += `| Git LFS | ${features.lfs.started.length} | ${features.lfs.completed.length} | ${features.lfs.failed.length} |\n`;
+        summaryBody += `| Packages | ${features.packages.started.length} | ${features.packages.completed.length} | ${features.packages.failed.length} |\n`;
+        summaryBody += `| Releases | ${features.releases.started.length} | ${features.releases.completed.length} | ${features.releases.failed.length} |\n`;
+        summaryBody += `| **Total** | **${totalStarted}** | **${totalCompleted}** | **${totalFailed}** |\n\n`;
+
+        // Add completion rate
+        const completionRate = totalStarted > 0 ? Math.round((totalCompleted / totalStarted) * 100) : 0;
+        summaryBody += `**Completion Rate:** ${completionRate}% (${totalCompleted}/${totalStarted})\n`;
+    }
+
     // Post summary if any special features were migrated
-    if (features.lfs.started.length > 0 || features.packages.started.length > 0 || features.releases.started.length > 0) {
+    if (hasAnyFeatures) {
         await github.rest.issues.createComment({
             issue_number: issueNumber,
             owner: context.repo.owner,
