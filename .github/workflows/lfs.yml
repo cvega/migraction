@@ -73,7 +73,7 @@ jobs:
       id: migrate
       run: |
         gh migrate-lfs sync \
-          --file ${{ inputs.repository }} \
+          --file ${{ inputs.repository }}.csv \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
           --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
           --work-dir /opt/migration/lfs
