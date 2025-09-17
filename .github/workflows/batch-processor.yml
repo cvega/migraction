@@ -159,8 +159,7 @@ jobs:
             {
               "repository": "${{ matrix.repository }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
-              "batch_number": "${{ env.BATCH_NUMBER }}",
-              
+              "batch_number": "${{ env.BATCH_NUMBER }}"
             }
 
       # - name: Trigger packages data migration
