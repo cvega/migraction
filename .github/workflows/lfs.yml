@@ -64,6 +64,8 @@ jobs:
 
     - name: Prepare LFS migration
       uses: actions/github-script@v8
+      env:
+        CLONE_URL: ${{ inputs.repository }}.git
       with:
         script: |
           const script = require('./.github/scripts/filters/lfs.js');
