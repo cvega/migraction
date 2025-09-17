@@ -63,14 +63,11 @@ jobs:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
 
     - name: Prepare LFS migration
-      uses: actions/github-script@v8
       env:
         CLONE_URL: ${{ inputs.repository }}.git
         LFS_CSV_PATH: lfs.csv
-      with:
-        script: |
-          const script = require('./.github/scripts/filters/lfs.js');
-          return await script({github, context});
+      run: |
+          node .github/scripts/filters/lfs.js extract
     
     - name: Migrate LFS objects to target repository
       id: migrate
