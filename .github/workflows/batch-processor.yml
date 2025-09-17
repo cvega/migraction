@@ -85,7 +85,7 @@ jobs:
         run: |
           # Check and collect secrets
           SECRETS_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh secret list \
-            --repo "${{ matrix.repository }}" \
+            --repo "${{ steps.repo-info.outputs.path }}" \
             --limit 1000 \
             --json name,updatedAt 2>/dev/null || echo "[]")
 
@@ -100,7 +100,7 @@ jobs:
 
           # Check and collect variables
           VARIABLES_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh variable list \
-            --repo "${{ matrix.repository }}" \
+            --repo "${{ steps.repo-info.outputs.path }}" \
             --limit 1000 \
             --json name,value 2>/dev/null || echo "[]")
 
