@@ -86,7 +86,6 @@ jobs:
           # Check and collect secrets
           SECRETS_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh secret list \
             --repo "${{ steps.repo-info.outputs.path }}" \
-            --limit 1000 \
             --json name,updatedAt 2>/dev/null || echo "[]")
 
           if [ "$(echo "$SECRETS_JSON" | jq -r 'length')" -gt 0 ]; then
@@ -101,7 +100,6 @@ jobs:
           # Check and collect variables
           VARIABLES_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh variable list \
             --repo "${{ steps.repo-info.outputs.path }}" \
-            --limit 1000 \
             --json name,value 2>/dev/null || echo "[]")
 
           if [ "$(echo "$VARIABLES_JSON" | jq -r 'length')" -gt 0 ]; then
