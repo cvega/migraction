@@ -72,15 +72,12 @@ jobs:
     - name: Migrate LFS objects to target repository
       id: migrate
       run: |
-        # Uncomment and configure for production use:
-        # gh migrate-lfs sync \
-        #   --file ${{ inputs.repository }} \
-        #   --target-organization ${{ vars.TARGET_ORGANIZATION }} \
-        #   --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
-        #   --work-dir lfs/
+        gh migrate-lfs sync \
+          --file ${{ inputs.repository }} \
+          --target-organization ${{ vars.TARGET_ORGANIZATION }} \
+          --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
+          --work-dir /opt/migration/lfs
         
-        # For now, just show help (remove in production)
-        gh migrate-lfs sync --help
         echo "lfs_status=success" >> $GITHUB_OUTPUT
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
