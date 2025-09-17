@@ -80,9 +80,39 @@ jobs:
           GH_PAT: ${{ secrets.TARGET_ADMIN_TOKEN }}
           GH_SOURCE_PAT: ${{ secrets.SOURCE_ADMIN_TOKEN }}
 
-      - name: Detect LFS, packages, and releases requirements
+      - name: Detect features requiring additional migration steps
         id: migration-checks
         run: |
+          # Check and collect secrets
+          SECRETS_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh secret list \
+            --repo "${{ matrix.repository }}" \
+            --limit 1000 \
+            --json name,updatedAt 2>/dev/null || echo "[]")
+
+          if [ "$(echo "$SECRETS_JSON" | jq -r 'length')" -gt 0 ]; then
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+            # Store as base64 to handle special characters and multiline
+            echo "secrets_data=$(echo "$SECRETS_JSON" | base64 -w 0)" >> $GITHUB_OUTPUT
+          else
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "secrets_data=" >> $GITHUB_OUTPUT
+          fi
+
+          # Check and collect variables
+          VARIABLES_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh variable list \
+            --repo "${{ matrix.repository }}" \
+            --limit 1000 \
+            --json name,value 2>/dev/null || echo "[]")
+
+          if [ "$(echo "$VARIABLES_JSON" | jq -r 'length')" -gt 0 ]; then
+            echo "has_variables=true" >> $GITHUB_OUTPUT
+            # Store as base64 to handle special characters and multiline
+            echo "variables_data=$(echo "$VARIABLES_JSON" | base64 -w 0)" >> $GITHUB_OUTPUT
+          else
+            echo "has_variables=false" >> $GITHUB_OUTPUT
+            echo "variables_data=" >> $GITHUB_OUTPUT
+          fi
+
           # Check LFS
           if CLONE_URL="${{ matrix.repository }}" LFS_CSV_PATH="lfs.csv" node .github/scripts/filters/lfs.js check | grep -q "found=true"; then
             echo "lfs=true" >> $GITHUB_OUTPUT
@@ -90,12 +120,12 @@ jobs:
             echo "lfs=false" >> $GITHUB_OUTPUT
           fi
           
-          # Check packages
-          if node .github/scripts/migration/check-repo.cjs packages.csv "${{ matrix.repository }}" | grep -q "found=true"; then
-            echo "packages=true" >> $GITHUB_OUTPUT
-          else
-            echo "packages=false" >> $GITHUB_OUTPUT
-          fi
+          # # Check packages
+          # if node .github/scripts/migration/check-repo.cjs packages.csv "${{ matrix.repository }}" | grep -q "found=true"; then
+          #   echo "packages=true" >> $GITHUB_OUTPUT
+          # else
+          #   echo "packages=false" >> $GITHUB_OUTPUT
+          # fi
           
           # Check releases
           RELEASES_DIR="/opt/migration/releases/${{ steps.repo-info.outputs.path }}"
@@ -104,6 +134,22 @@ jobs:
           else
             echo "releases=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Trigger variables and secrets migration
+        if: steps.migration-checks.outputs.has_variables == 'true' || steps.migration-checks.outputs.has_secrets == 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: variables-secrets.yml
+          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          inputs: |
+            {
+              "repository": "${{ matrix.repository }}",
+              "target_repo": "${{ env.TARGET_ORG }}/${{ steps.repo-info.outputs.name }}",
+              "variables_data": "${{ steps.migration-checks.outputs.variables_data }}",
+              "secrets_data": "${{ steps.migration-checks.outputs.secrets_data }}",
+              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+              "batch_number": "${{ env.BATCH_NUMBER }}"
+            }
 
       - name: Trigger LFS data migration
         if: steps.migration-checks.outputs.lfs == 'true'
@@ -118,18 +164,18 @@ jobs:
               "batch_number": "${{ env.BATCH_NUMBER }}"
             }
 
-      - name: Trigger packages data migration
-        if: steps.migration-checks.outputs.packages == 'true'
-        uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: packages.yml
-          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          inputs: |
-            {
-              "repository": "${{ matrix.repository }}",
-              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
-              "batch_number": "${{ env.BATCH_NUMBER }}"
-            }
+      # - name: Trigger packages data migration
+      #   if: steps.migration-checks.outputs.packages == 'true'
+      #   uses: benc-uk/workflow-dispatch@v1
+      #   with:
+      #     workflow: packages.yml
+      #     token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+      #     inputs: |
+      #       {
+      #         "repository": "${{ matrix.repository }}",
+      #         "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+      #         "batch_number": "${{ env.BATCH_NUMBER }}"
+      #       }
 
       - name: Trigger releases data migration
         if: steps.migration-checks.outputs.releases == 'true'
