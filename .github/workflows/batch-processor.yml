@@ -82,6 +82,8 @@ jobs:
 
       - name: Detect features requiring additional migration steps
         id: migration-checks
+        env:
+          LOCAL_CACHE_DIR ${{ variables.LOCAL_CACHE_DIR || '/opt/migration' }}                           
         run: |
           # Check and collect secrets
           SECRETS_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh secret list \
@@ -126,7 +128,7 @@ jobs:
           # fi
           
           # Check releases
-          RELEASES_DIR="/opt/migration/releases/${{ steps.repo-info.outputs.path }}"
+          RELEASES_DIR="$LOCAL_CACHE_DIR/releases/${{ steps.repo-info.outputs.path }}"
           if [ -d "$RELEASES_DIR" ]; then
             echo "releases=true" >> $GITHUB_OUTPUT
           else
