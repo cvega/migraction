@@ -89,8 +89,6 @@ jobs:
             echo "sync_status=failed" >> $GITHUB_OUTPUT
             echo "sync_error_code=$SYNC_EXIT_CODE" >> $GITHUB_OUTPUT
           fi
-          
-          exit $SYNC_EXIT_CODE
         else
           echo "sync_status=skipped" >> $GITHUB_OUTPUT
           echo "No CSV file found to sync"
@@ -103,23 +101,20 @@ jobs:
       uses: actions/github-script@v8
       with:
         script: |
-          const exportStatus = '${{ steps.export.outputs.export_status }}';
           const syncStatus = '${{ steps.sync.outputs.sync_status }}';
-          const envCount = parseInt('${{ steps.export.outputs.environments_found }}' || '0');
-          const exportErrorCode = '${{ steps.export.outputs.export_error_code }}';
           const syncErrorCode = '${{ steps.sync.outputs.sync_error_code }}';
           
           let success = false;
           let icon = '❌';
           let status = 'failed';
           
-          if (exportStatus === 'success' && (syncStatus === 'success' || syncStatus === 'skipped')) {
+          if (syncStatus === 'success' || syncStatus === 'skipped') {
             success = true;
             icon = '✅';
             status = 'completed successfully';
-          } else if (exportStatus === 'success' && syncStatus === 'failed') {
-            icon = '⚠️';
-            status = 'completed with errors';
+          } else if (syncStatus === 'failed') {
+            icon = '❌';
+            status = 'failed';
           }
           
           const batchInfo = context.payload.inputs.batch_number ? 
@@ -127,16 +122,13 @@ jobs:
           
           let statusMessage = '';
           if (success) {
-            if (envCount === 0) {
-              statusMessage = 'No environments found to migrate.';
+            if (syncStatus === 'skipped') {
+              statusMessage = 'No environment CSV file found to migrate.';
             } else {
-              statusMessage = `Successfully migrated ${envCount} environment(s) with their protection rules and deployment policies.`;
+              statusMessage = 'Successfully migrated environments with their protection rules and deployment policies.';
             }
           } else {
             statusMessage = '⚠️ Please check the workflow logs for error details.';
-            if (exportErrorCode) {
-              statusMessage += `\n**Export Error Code:** ${exportErrorCode}`;
-            }
             if (syncErrorCode) {
               statusMessage += `\n**Sync Error Code:** ${syncErrorCode}`;
             }
