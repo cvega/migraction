@@ -116,7 +116,7 @@ jobs:
           fi
 
           # Check LFS
-          if cat $LOCAL_CACHE_DIR/${{ env.SOURCE_ORG }}_lfs.csv | tail -n+2 | cut -d, -f3 | sort -u | grep -q "${{ matrix.repository }}"; then
+          if CLONE_URL="${{ matrix.repository }}.git" LFS_CSV_PATH="lfs.csv" node .github/scripts/filters/lfs.js check | grep -q "found=true"; then
             echo "lfs=true" >> $GITHUB_OUTPUT
           else
             echo "lfs=false" >> $GITHUB_OUTPUT

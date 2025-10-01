@@ -76,7 +76,7 @@ jobs:
           --file ${{ inputs.repository }}.csv \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
           --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
-          --work-dir /opt/migration/lfs
+          --work-dir ${{ vars.LOCAL_CACHE_DIR }}/lfs
         
         echo "lfs_status=success" >> $GITHUB_OUTPUT
       env:
