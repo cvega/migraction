@@ -34,6 +34,9 @@ function parseArgs() {
       case '--total-batches':
         params.totalBatches = args[++i];
         break;
+      case '--source-hostname':
+        params.sourceHostname = args[++i];
+        break;
       case '--lock-source':
         params.lockSource = true;
         break;
@@ -60,6 +63,7 @@ Options:
   --migration-type <type>      Migration type (dry-run|production)
   --batch-number <n>           Current batch number
   --total-batches <n>          Total number of batches
+  --source-hostname <host>     Custom GHES hostname (overrides URL parsing)
   --lock-source                Lock source repository during migration
   --no-skip-releases           Include releases in migration
   --help                       Show this help message
@@ -180,8 +184,13 @@ async function main() {
   }
 
   // Handle GHES vs GitHub.com
-  if (repoHost !== 'github.com') {
-    geiArgs.push('--ghes-api-url', `https://${repoHost}/api/v3`);
+  // Use provided hostname if available, otherwise fall back to URL parsing
+  const ghesHost = params.sourceHostname || (repoHost !== 'github.com' ? repoHost : null);
+  if (ghesHost) {
+    geiArgs.push('--ghes-api-url', `https://${ghesHost}/api/v3`);
+    console.log('Using GHES API URL:', `https://${ghesHost}/api/v3`);
+  } else {
+    console.log('Using GitHub.com API');
   }
 
   // Add migration type specific flags
