@@ -11,12 +11,13 @@ module.exports = async ({ github, context, core }) => {
         per_page: 100
     });
 
-    // Parse comments to find LFS, packages, releases, and variables/secrets migrations
+    // Parse comments to find LFS, packages, releases, variables/secrets, and environments migrations
     const features = {
         lfs: { started: [], completed: [], failed: [] },
         packages: { started: [], completed: [], failed: [] },
         releases: { started: [], completed: [], failed: [] },
-        variablesSecrets: { started: [], completed: [], failed: [] }
+        variablesSecrets: { started: [], completed: [], failed: [] },
+        environments: { started: [], completed: [], failed: [] }
     };
 
     comments.data.forEach(comment => {
@@ -80,6 +81,23 @@ module.exports = async ({ github, context, core }) => {
                 features.variablesSecrets.failed.push(repo);
             }
         }
+
+        // Check for Environments migrations
+        if (body.includes('Environments Migration')) {
+            const repoMatch = body.match(/\*\*Repository:\*\* `([^`]+)`/);
+            const repo = repoMatch ? repoMatch[1] : 'unknown';
+
+            if (body.includes('Environments Migration Starting')) {
+                features.environments.started.push(repo);
+            } else if (body.includes('✅ Environments Migration completed successfully')) {
+                features.environments.completed.push(repo);
+            } else if (body.includes('⚠️ Environments Migration completed with errors')) {
+                // Count partial success as completed but track separately if needed
+                features.environments.completed.push(repo);
+            } else if (body.includes('❌ Environments Migration failed')) {
+                features.environments.failed.push(repo);
+            }
+        }
     });
 
     // Generate summary
@@ -135,22 +153,36 @@ module.exports = async ({ github, context, core }) => {
         summaryBody += `| ⏳ In Progress | ${features.releases.started.length - features.releases.completed.length - features.releases.failed.length} | - |\n\n`;
     }
 
+    // Environments Summary
+    if (features.environments.started.length > 0) {
+        hasAnyFeatures = true;
+        summaryBody += `### 🌍 Environments Migrations\n`;
+        summaryBody += `| Status | Count | Repositories |\n`;
+        summaryBody += `|--------|-------|-------------|\n`;
+        summaryBody += `| ✅ Completed | ${features.environments.completed.length} | ${features.environments.completed.join(', ') || 'None'} |\n`;
+        summaryBody += `| ❌ Failed | ${features.environments.failed.length} | ${features.environments.failed.join(', ') || 'None'} |\n`;
+        summaryBody += `| ⏳ In Progress | ${features.environments.started.length - features.environments.completed.length - features.environments.failed.length} | - |\n\n`;
+    }
+
     // Calculate totals
     if (hasAnyFeatures) {
         const totalStarted = features.variablesSecrets.started.length +
             features.lfs.started.length +
             features.packages.started.length +
-            features.releases.started.length;
+            features.releases.started.length +
+            features.environments.started.length;
 
         const totalCompleted = features.variablesSecrets.completed.length +
             features.lfs.completed.length +
             features.packages.completed.length +
-            features.releases.completed.length;
+            features.releases.completed.length +
+            features.environments.completed.length;
 
         const totalFailed = features.variablesSecrets.failed.length +
             features.lfs.failed.length +
             features.packages.failed.length +
-            features.releases.failed.length;
+            features.releases.failed.length +
+            features.environments.failed.length;
 
         summaryBody += `---\n\n`;
         summaryBody += `### 📈 Overall Summary\n\n`;
@@ -160,6 +192,7 @@ module.exports = async ({ github, context, core }) => {
         summaryBody += `| Git LFS | ${features.lfs.started.length} | ${features.lfs.completed.length} | ${features.lfs.failed.length} |\n`;
         summaryBody += `| Packages | ${features.packages.started.length} | ${features.packages.completed.length} | ${features.packages.failed.length} |\n`;
         summaryBody += `| Releases | ${features.releases.started.length} | ${features.releases.completed.length} | ${features.releases.failed.length} |\n`;
+        summaryBody += `| Environments | ${features.environments.started.length} | ${features.environments.completed.length} | ${features.environments.failed.length} |\n`;
         summaryBody += `| **Total** | **${totalStarted}** | **${totalCompleted}** | **${totalFailed}** |\n\n`;
 
         // Add completion rate
