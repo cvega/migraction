@@ -23,6 +23,7 @@ jobs:
     
     env:
       TARGET_ORG: ${{ github.event.client_payload.batch.targetOrganization }}
+      SOURCE_ORG: ${{ github.event.client_payload.batch.sourceOrganization }}
       BATCH_NUMBER: ${{ github.event.client_payload.batch.batchNumber }}
       MIGRATION_TYPE: ${{ github.event.client_payload.batch.migrationType }}
       VISIBILITY: ${{ github.event.client_payload.batch.targetRepositoryVisibility }}
@@ -31,6 +32,7 @@ jobs:
       INSTALL_PREREQS: ${{ github.event.client_payload.batch.installPrereqs || 'false' }}
       REPOSITORY: ${{ matrix.repository }}
       BATCH_ID: ${{ github.event.client_payload.batch.batchId }}
+      
 
     steps:
       - name: Checkout code
@@ -83,7 +85,7 @@ jobs:
       - name: Detect features requiring additional migration steps
         id: migration-checks
         env:
-          LOCAL_CACHE_DIR ${{ variables.LOCAL_CACHE_DIR || '/opt/migration' }}                           
+          LOCAL_CACHE_DIR: ${{ vars.LOCAL_CACHE_DIR || '/opt/migration' }}                           
         run: |
           # Check and collect secrets
           SECRETS_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh secret list \
@@ -114,18 +116,18 @@ jobs:
           fi
 
           # Check LFS
-          if CLONE_URL="${{ matrix.repository }}.git" LFS_CSV_PATH="lfs.csv" node .github/scripts/filters/lfs.js check | grep -q "found=true"; then
+          if cat $LOCAL_CACHE_DIR/${{ env.SOURCE_ORG }}_lfs.csv | tail -n+2 | cut -d, -f3 | sort -u | grep -q "${{ matrix.repository }}"; then
             echo "lfs=true" >> $GITHUB_OUTPUT
           else
             echo "lfs=false" >> $GITHUB_OUTPUT
           fi
           
-          # # Check packages
-          # if node .github/scripts/migration/check-repo.cjs packages.csv "${{ matrix.repository }}" | grep -q "found=true"; then
-          #   echo "packages=true" >> $GITHUB_OUTPUT
-          # else
-          #   echo "packages=false" >> $GITHUB_OUTPUT
-          # fi
+          # Check packages
+          if cat $LOCAL_CACHE_DIR/packages/export/*/*.csv  | tail -n+2 | cut -d, -f2 | sort -u | grep -q "${{ steps.repo-info.outputs.name }}"; then
+            echo "packages=true" >> $GITHUB_OUTPUT
+          else
+            echo "packages=false" >> $GITHUB_OUTPUT
+          fi
           
           # Check releases
           RELEASES_DIR="$LOCAL_CACHE_DIR/releases/${{ steps.repo-info.outputs.path }}"
@@ -135,6 +137,13 @@ jobs:
             echo "releases=false" >> $GITHUB_OUTPUT
           fi
 
+          # Check environments
+          if cat $LOCAL_CACHE_DIR/${{ env.SOURCE_ORG }}_environments.csv | tail -n+2 | cut -d, -f2 | sort -u | grep -q "${{ steps.repo-info.outputs.name }}"; then
+            echo "environments=true" >> $GITHUB_OUTPUT
+          else
+            echo "environments=false" >> $GITHUB_OUTPUT
+          fi
+          
       - name: Trigger variables and secrets migration
         if: steps.migration-checks.outputs.has_variables == 'true' || steps.migration-checks.outputs.has_secrets == 'true'
         uses: benc-uk/workflow-dispatch@v1
@@ -164,18 +173,18 @@ jobs:
               "batch_number": "${{ env.BATCH_NUMBER }}"
             }
 
-      # - name: Trigger packages data migration
-      #   if: steps.migration-checks.outputs.packages == 'true'
-      #   uses: benc-uk/workflow-dispatch@v1
-      #   with:
-      #     workflow: packages.yml
-      #     token: ${{ secrets.TARGET_ADMIN_TOKEN }}
-      #     inputs: |
-      #       {
-      #         "repository": "${{ matrix.repository }}",
-      #         "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
-      #         "batch_number": "${{ env.BATCH_NUMBER }}"
-      #       }
+      - name: Trigger packages data migration
+        if: steps.migration-checks.outputs.packages == 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: packages.yml
+          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          inputs: |
+            {
+              "repository": "${{ matrix.repository }}",
+              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+              "batch_number": "${{ env.BATCH_NUMBER }}"
+            }
 
       - name: Trigger releases data migration
         if: steps.migration-checks.outputs.releases == 'true'
@@ -188,6 +197,20 @@ jobs:
               "repo": "${{ steps.repo-info.outputs.path }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
               "batch_number": "${{ env.BATCH_NUMBER }}"
+            }
+
+      - name: Trigger environments data migration
+        if: steps.migration-checks.outputs.environments == 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: environments.yml
+          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          inputs: |
+            {
+              "repository": "${{ matrix.repository }}",
+              "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
+              "batch_number": "${{ env.BATCH_NUMBER }}",
+              "file_name": "${{ vars.LOCAL_CACHE_DIR }}/${{ env.SOURCE_ORG }}_environments.csv"
             }
 
       - name: Map mannequin users to real accounts

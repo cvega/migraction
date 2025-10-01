@@ -25,14 +25,32 @@ body:
         ---
 
   - type: dropdown
-    id: source-type
+    id: source-environment
     attributes:
-      label: 📍 Source Platform
-      description: Where are you migrating from?
+      label: 🏠 Source Environment
+      description: Select your specific source environment (hostname and org are automatically determined)
       options:
-        - GitHub Enterprise Server (GHES)
-        - GitHub Enterprise Cloud (GHEC)
-        - GitHub.com
+        - "GHES Production (ghes-prod.company.com/production-org)"
+        - "GHES Staging (ghes-stage.company.com/staging-org)"
+        - "GHES Development (ghes-dev.company.com/dev-org)"
+        - "GHEC Legacy Organization (github.com/legacy-org)"
+        - "GHEC Old Organization (github.com/old-org)" 
+        - "GitHub.com Company (github.com/company-org)"
+        - "GitHub.com Archive (github.com/archive-org)"
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target-environment
+    attributes:
+      label: 🎯 Target Environment
+      description: Select where you want to migrate TO
+      options:
+        - "GHEC: Main Production Organization"
+        - "GHEC: Development Organization"
+        - "GHEC: Testing Organization" 
+        - "GHEC: Staging Organization"
       default: 0
     validations:
       required: true

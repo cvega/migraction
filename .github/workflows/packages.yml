@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   migrate-packages:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -67,16 +67,17 @@ jobs:
       id: migrate
       run: |
         # Uncomment and configure for production use:
-        # gh migrate-packages sync \
-        #   --repository ${{ inputs.repository }} \
-        #   --target-organization ${{ vars.TARGET_ORGANIZATION }} \
-        #   --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
+        gh migrate-packages sync \
+          --migration-path "${{ env.LOCAL_CACHE_DIR }}/packages" \
+          --repository ${{ steps.repo-info.outputs.name }} \
+          --source-organization ${{ vars.SOURCE_ORGANIZATION }} \
+          --target-organization ${{ vars.TARGET_ORGANIZATION }} \
+          --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
         
-        # For now, just show help (remove in production)
-        gh migrate-packages sync --help
         echo "packages_status=success" >> $GITHUB_OUTPUT
       env:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        LOCAL_CACHE_DIR: ${{ vars.LOCAL_CACHE_DIR || '/opt/migration' }}
     
     - name: Report packages migration completion
       if: ${{ always() && inputs.issue_number != '' }}

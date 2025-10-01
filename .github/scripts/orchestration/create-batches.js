@@ -32,6 +32,7 @@ module.exports = async ({ context, core }) => {
             migrationId: process.env.MIGRATION_ID,
             issueNumber: context.issue.number,
             migrationType: process.env.MIGRATION_TYPE,
+            sourceOrganization: context.repo.owner,
             targetOrganization: process.env.TARGET_ORG,
             targetRepositoryVisibility: process.env.VISIBILITY,
             installPrereqs: process.env.INSTALL_PREREQS,
