@@ -63,17 +63,20 @@ jobs:
         GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
 
     - name: Prepare LFS migration
+      id: prepare
       env:
         CLONE_URL: ${{ inputs.repository }}.git
         LFS_CSV_PATH: lfs.csv
       run: |
-          node .github/scripts/filters/lfs.js extract
+          node .github/scripts/filters/lfs.js extract 
+          REPO_NAME=$(basename "${{ inputs.repository }}")
+          echo "csv_file=${REPO_NAME}.csv" >> $GITHUB_OUTPUT
     
     - name: Migrate LFS objects to target repository
       id: migrate
       run: |
         gh migrate-lfs sync \
-          --file ${{ inputs.repository }}.csv \
+          --file ${{ steps.prepare.outputs.csv_file }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
           --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
           --work-dir ${{ vars.LOCAL_CACHE_DIR }}/lfs
