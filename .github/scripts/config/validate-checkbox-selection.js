@@ -1,6 +1,4 @@
 module.exports = async ({ github, context, core }) => {
-  const fs = require('fs');
-  
   console.log('=== Validating Checkbox Selection ===');
   
   const commentBody = context.payload.comment.body;
@@ -19,10 +17,16 @@ module.exports = async ({ github, context, core }) => {
   const sourceSection = commentBody.match(/📤[\s\S]*?📥/)?.[0] || '';
   const targetSection = commentBody.split('📥')[1] || '';
   
-  const sourceChecked = sourceSection.match(/- \[x\]/gi)?.length || 0;
-  const targetChecked = targetSection.match(/- \[x\]/gi)?.length || 0;
+  console.log('=== DEBUG: Checkbox Detection ===');
+  console.log('Source section length:', sourceSection.length);
+  console.log('Target section length:', targetSection.length);
+  
+  // More flexible regex to catch various checkbox formats
+  const sourceChecked = (sourceSection.match(/- \[[xX✓✔]\]/g) || []).length;
+  const targetChecked = (targetSection.match(/- \[[xX✓✔]\]/g) || []).length;
   
   console.log(`Source checked: ${sourceChecked}, Target checked: ${targetChecked}`);
+  console.log('=== END DEBUG ===');
   
   // Check if valid (exactly 1 of each)
   const isValid = sourceChecked === 1 && targetChecked === 1;
@@ -49,9 +53,9 @@ module.exports = async ({ github, context, core }) => {
     if (line.startsWith('**') && line.includes('**')) {
       const match = line.match(/\*\*([^*]+)\*\*/);
       if (match) currentInstance = match[1];
-    } else if ((line.includes('- [x]') || line.includes('- [X]')) && currentInstance) {
+    } else if (line.match(/- \[[xX✓✔]\]/)) {
       const orgMatch = line.match(/`([^`]+)`/);
-      if (orgMatch) {
+      if (orgMatch && currentInstance) {
         sourceInstance = currentInstance;
         sourceOrg = orgMatch[1];
       }
@@ -64,9 +68,9 @@ module.exports = async ({ github, context, core }) => {
     if (line.startsWith('**') && line.includes('**')) {
       const match = line.match(/\*\*([^*]+)\*\*/);
       if (match) currentInstance = match[1];
-    } else if ((line.includes('- [x]') || line.includes('- [X]')) && currentInstance) {
+    } else if (line.match(/- \[[xX✓✔]\]/)) {
       const orgMatch = line.match(/`([^`]+)`/);
-      if (orgMatch) {
+      if (orgMatch && currentInstance) {
         targetInstance = currentInstance;
         targetOrg = orgMatch[1];
       }
@@ -75,10 +79,14 @@ module.exports = async ({ github, context, core }) => {
   
   console.log(`Selected: ${sourceInstance}/${sourceOrg} → ${targetInstance}/${targetOrg}`);
   
-  // Load config to get hostnames
-  const config = JSON.parse(fs.readFileSync('.github/config/instances.json', 'utf8'));
-  const sourceHostname = config.sources[sourceInstance]?.hostname;
-  const targetHostname = config.targets[targetInstance]?.hostname;
+  // Extract hostnames from the comment itself (they're already displayed there)
+  const sourceHostnameMatch = sourceSection.match(/\(`([^`]+)`\)/);
+  const targetHostnameMatch = targetSection.match(/\(`([^`]+)`\)/);
+  
+  const sourceHostname = sourceHostnameMatch ? sourceHostnameMatch[1] : 'unknown';
+  const targetHostname = targetHostnameMatch ? targetHostnameMatch[1] : 'unknown';
+  
+  console.log(`Hostnames: ${sourceHostname} → ${targetHostname}`);
   
   // Set outputs
   core.setOutput('source_instance', sourceInstance);
