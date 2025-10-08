@@ -55,14 +55,14 @@ jobs:
               return;
             }
             
-            // Post Step 3
-            const script = require('./.github/scripts/reporting/post-next-steps.js');
-            await script({github, context});
-            
-            // Post confirmation of selection
+            // POST CONFIRMATION FIRST (swapped order)
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `### ✅ Organizations Selected\n\n**Source:** \`${process.env.SOURCE_ORG}\` @ \`${process.env.SOURCE_HOSTNAME}\`\n**Target:** \`${process.env.TARGET_ORG}\` @ \`${process.env.TARGET_HOSTNAME}\`\n\n📋 Proceed to Step 3 below to provide your repository URLs.`
             });
+            
+            // THEN POST STEP 3 (swapped order)
+            const script = require('./.github/scripts/reporting/post-next-steps.js');
+            await script({github, context});
