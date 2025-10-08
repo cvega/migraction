@@ -32,8 +32,73 @@ jobs:
         run: echo $JSON_STRING
         env:
           JSON_STRING: ${{ steps.parse-issue-body.outputs.jsonString }}
+      
+      # NEW STEP: Filter organizations by instance and user
+      - name: Filter organizations by instance and user
+        id: filter-orgs
+        uses: actions/github-script@v8
+        env:
+          SOURCE_INSTANCE: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._source_environment }}
+          TARGET_INSTANCE: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_environment }}
+        with:
+          script: |
+            const script = require('./.github/scripts/config/filter-orgs-by-instance.js');
+            return await script({github, context, core});
+
+      # NEW STEP: Deny access if unauthorized
+      - name: Deny access if unauthorized
+        if: steps.filter-orgs.outputs.has_access == 'false'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### ❌ Access Denied\n\n@${context.payload.issue.user.login}, you don't have access to any organizations in the selected instances.\n\n**Selected:**\n- Source: ${process.env.SOURCE_INSTANCE}\n- Target: ${process.env.TARGET_INSTANCE}\n\nContact your administrator to request access.`
+            });
+            
+            await github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              state_reason: 'not_planned'
+            });
+            
+            core.setFailed('User does not have access');
+        env:
+          SOURCE_INSTANCE: ${{ steps.filter-orgs.outputs.source_instance }}
+          TARGET_INSTANCE: ${{ steps.filter-orgs.outputs.target_instance }}
+
+      # NEW STEP: Post organization checkboxes
+      - name: Post organization selection checkboxes
+        if: steps.filter-orgs.outputs.has_access == 'true'
+        uses: actions/github-script@v8
+        env:
+          SOURCE_INSTANCE: ${{ steps.filter-orgs.outputs.source_instance }}
+          SOURCE_HOSTNAME: ${{ steps.filter-orgs.outputs.source_hostname }}
+          SOURCE_ORGS: ${{ steps.filter-orgs.outputs.source_orgs }}
+          TARGET_INSTANCE: ${{ steps.filter-orgs.outputs.target_instance }}
+          TARGET_HOSTNAME: ${{ steps.filter-orgs.outputs.target_hostname }}
+          TARGET_ORGS: ${{ steps.filter-orgs.outputs.target_orgs }}
+        with:
+          script: |
+            const script = require('./.github/scripts/reporting/post-org-selection.js');
+            return await script({github, context});
+
+      # NEW STEP: Post next steps
+      - name: Post next steps instructions
+        if: steps.filter-orgs.outputs.has_access == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const script = require('./.github/scripts/reporting/post-next-steps.js');
+            return await script({github, context});
         
+      # MODIFIED STEP: Remove TARGET_ORG env var since we don't know it yet
       - name: Post migration setup instructions
+        if: steps.filter-orgs.outputs.has_access == 'true'
         uses: actions/github-script@v8
         with:
           script: |
@@ -42,8 +107,7 @@ jobs:
         env:
           REPOSITORIES: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._repositories }}
           VISIBILITY: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_repository_visibility }}
-          TARGET_ORG: ${{ vars.TARGET_ORGANIZATION }}
-          TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          # Removed: TARGET_ORG (not known yet)
 
       - name: Report issue parsing error
         if: ${{ failure() }}
