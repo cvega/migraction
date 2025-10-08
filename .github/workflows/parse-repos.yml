@@ -165,7 +165,7 @@ jobs:
           steps.parse-repos.outputs.repo_count != '0'
         uses: actions/github-script@v8
         env:
-          REPOSITORIES: ${{ steps.parse-repos.outputs.repo_urls }}
+          REPO_URLS_JSON: ${{ steps.parse-repos.outputs.repo_urls }}
           VISIBILITY: ${{ fromJSON(steps.parse-issue.outputs.jsonString)._target_repository_visibility }}
           TARGET_ORG: ${{ steps.extract-orgs.outputs.target_org }}
           SOURCE_ORG: ${{ steps.extract-orgs.outputs.source_org }}
@@ -186,6 +186,15 @@ jobs:
               console.log('Step 4 already posted, skipping');
               return;
             }
+            
+            // Convert JSON array back to newline-separated text for init-issue.js
+            const repoUrls = JSON.parse(process.env.REPO_URLS_JSON);
+            const repoText = repoUrls.join('\n');
+            
+            // Set REPOSITORIES env var with the text format
+            process.env.REPOSITORIES = repoText;
+            
+            console.log(`Passing ${repoUrls.length} repos to init-issue.js`);
             
             // Post Step 4
             const script = require('./.github/scripts/reporting/init-issue.js');
