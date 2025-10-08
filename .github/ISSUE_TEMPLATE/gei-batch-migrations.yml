@@ -1,5 +1,5 @@
 name: 🚀 Migrate Repositories to GitHub Enterprise Cloud
-description: Batch migrate repositories from GHES, GHEC, or GitHub.com using GitHub Enterprise Importer
+description: Batch migrate repositories using GitHub Enterprise Importer
 title: "[Migration] <your-project-name>"
 labels: ["migration", "gei", "batch"]
 assignees: []
@@ -9,15 +9,28 @@ body:
       value: |
         # 🚀 GitHub Enterprise Importer (GEI) Migration
         
-        > **Welcome!** This issue will track your repository migration to your target organization.
+        > **Welcome!** This issue will guide you through a multi-step migration process.
+        
+        ---
+        
+        ## 📋 How This Works
+        
+        This migration uses a **4-step guided process** for security and flexibility:
+        
+        1. **Step 1 (This Form)**: Select source and target instances
+        2. **Step 2 (Automated)**: We'll show you organizations you have access to
+        3. **Step 3 (Your Action)**: Select specific organizations and provide repository URLs
+        4. **Step 4 (Your Action)**: Run the migration command
+        
+        This ensures you only see organizations you're authorized to access and can migrate between any valid source/target combination.
         
         ---
         
         ## 📋 Pre-Migration Checklist
         
         Before submitting this issue, ensure you have:
-        - [ ] Verified the repository URLs are correct and accessible
-        - [ ] Confirmed you're authorized to migrate these repositories
+        - [ ] Verified you have admin access to source repositories
+        - [ ] Confirmed you're authorized to migrate to the target organization
         - [ ] Notified repository contributors about the migration
         - [ ] Identified any dependencies between repositories
         - [ ] Reviewed active PRs and issues that may be affected
@@ -25,64 +38,25 @@ body:
         ---
 
   - type: dropdown
-    id: source-environment
+    id: source-instance
     attributes:
-      label: 🏠 Source Environment
-      description: Select your specific source environment (hostname and org are automatically determined)
+      label: 🏠 Source Instance
+      description: Select the GitHub instance you're migrating FROM
       options:
-        - "GHES Production (ghes-prod.company.com/production-org)"
-        - "GHES Staging (ghes-stage.company.com/staging-org)"
-        - "GHES Development (ghes-dev.company.com/dev-org)"
-        - "GHEC Legacy Organization (github.com/legacy-org)"
-        - "GHEC Old Organization (github.com/old-org)" 
-        - "GitHub.com Company (github.com/company-org)"
-        - "GitHub.com Archive (github.com/archive-org)"
+        - "GHEC"
+        - "GHES"
       default: 0
     validations:
       required: true
 
   - type: dropdown
-    id: target-environment
+    id: target-instance
     attributes:
-      label: 🎯 Target Environment
-      description: Select where you want to migrate TO
+      label: 🎯 Target Instance
+      description: Select the GitHub instance you're migrating TO
       options:
-        - "GHEC: Main Production Organization"
-        - "GHEC: Development Organization"
-        - "GHEC: Testing Organization" 
-        - "GHEC: Staging Organization"
+        - "GHEC EMU"
       default: 0
-    validations:
-      required: true
-
-  - type: textarea
-    id: repositories
-    attributes:
-      label: 📦 Repositories
-      description: |
-        **Enter the full URLs of repositories to migrate** (one per line)
-        
-        💡 **Tips:**
-        - Include the full URL (e.g., `https://github.example.com/org/repo`)
-        - You can migrate up to 1000 repositories in a single batch
-        - Repositories will be processed in batches of 250 for optimal performance
-        - Use the collapsible section below for large lists
-        
-        ⚠️ **Important:** Ensure URLs are correct and repositories exist
-      placeholder: |
-        https://github.example.com/your-org/repository-1
-        https://github.example.com/your-org/repository-2
-        https://github.example.com/your-org/repository-3
-      value: |
-        <details>
-        <summary>📋 Repository List (click to expand)</summary>
-        
-        <!-- Add your repository URLs below, one per line -->
-        <!-- Example: https://github.example.com/acme-corp/frontend-app -->
-        
-        
-        
-        </details>
     validations:
       required: true
 
@@ -185,16 +159,37 @@ body:
       value: |
         ---
         
-        ## 🎯 What Happens Next?
+        ## 🎯 What Happens After You Submit?
         
-        Once you submit this issue:
+        ### Immediate (Automated)
         
-        1. **Validation** - Our automation will validate your inputs and post a summary
-        2. **Commands** - You'll receive instructions to start the migration:
-           - `/run-dry-run-migration` - Test migration without locking repositories
-           - `/run-production-migration` - Execute the actual migration
-        3. **Progress** - Migration status updates will be posted as comments
-        4. **Completion** - Final report with results and any follow-up actions
+        1. **Permission Validation** 
+           - We'll check which organizations you have access to in the selected instances
+           - Only organizations you're authorized for will be shown
+        
+        2. **Organization Selection**
+           - You'll see a comment with checkboxes for available organizations
+           - Select ONE source organization and ONE target organization
+           - Edit the comment to check your selections
+        
+        3. **Repository URLs**
+           - After selecting organizations, you'll provide repository URLs
+           - Reply to the issue with your repository list
+        
+        ### When You're Ready
+        
+        4. **Start Migration**
+           - Run `/run-dry-run-migration` for a test migration
+           - Or `/run-production-migration` for the actual migration
+        
+        ---
+        
+        ### 📊 Progress Tracking
+        
+        Throughout the migration:
+        - Batch status updates will be posted to this issue
+        - Individual repository progress can be tracked in the Actions tab
+        - You can cancel anytime with `/cancel-migration`
         
         ---
         
@@ -206,15 +201,27 @@ body:
         
         ---
         
-        ### ⚡ Quick Commands Reference
+        ### ⚡ Available Commands
         
-        | Command | Description |
-        |---------|-------------|
-        | `/run-dry-run-migration` | Start a test migration (recommended first) |
-        | `/run-production-migration` | Start the actual migration |
-        | `/cancel-migration` | Stop an in-progress migration |
-        | `/delete-repositories` | Delete dry-run repositories |
+        | Command | Description | When to Use |
+        |---------|-------------|-------------|
+        | `/run-dry-run-migration` | Test migration without locking repos | After providing repository URLs |
+        | `/run-production-migration` | Execute actual migration | After successful dry-run |
+        | `/cancel-migration` | Stop in-progress migration | During migration |
+        | `/delete-repositories` | Delete migrated repositories | Clean up after dry-run or production |
         
         ---
         
-        💬 **Questions?** Add a comment below or contact your migration support team
+        ### 🔐 Security & Access Control
+        
+        **Why the multi-step process?**
+        - Ensures you only see organizations you have permission to access
+        - Prevents accidental migrations to wrong destinations
+        - Provides clear audit trail of selections
+        - Allows flexibility to migrate between any authorized org pairs
+        
+        ---
+        
+        💬 **Questions?** Add a comment below and the migration team will assist you!
+        
+        🚀 **Ready?** Click "Submit new issue" to begin!
