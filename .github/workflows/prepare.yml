@@ -38,8 +38,8 @@ jobs:
         id: filter-orgs
         uses: actions/github-script@v8
         env:
-          SOURCE_INSTANCE: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._source_environment }}
-          TARGET_INSTANCE: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_environment }}
+          SOURCE_INSTANCE: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._source_instance }}
+          TARGET_INSTANCE: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_instance }}
         with:
           script: |
             const script = require('./.github/scripts/config/filter-orgs-by-instance.js');
