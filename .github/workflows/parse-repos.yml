@@ -1,69 +1,192 @@
-- name: Extract selected organizations
-  id: extract-orgs
-  uses: actions/github-script@v8
-  with:
-    script: |
-      const comments = await github.rest.issues.listComments({
-        issue_number: context.issue.number,
-        owner: context.repo.owner,
-        repo: context.repo.repo
-      });
-      
-      const orgComment = comments.data.find(c => 
-        c.body.includes('📤 Source Organization') && 
-        c.body.includes('📥 Target Organization')
-      );
-      
-      if (!orgComment) {
-        core.setOutput('source_org', 'source-org');
-        core.setOutput('target_org', 'target-org');
-        return;
-      }
-      
-      const body = orgComment.body;
-      
-      // Extract source org
-      let sourceOrg = 'source-org';
-      const sourceSection = body.match(/📤[\s\S]*?📥/)?.[0] || '';
-      const sourceLines = sourceSection.split('\n');
-      for (const line of sourceLines) {
-        if ((line.includes('- [x]') || line.includes('- [X]'))) {
-          const orgMatch = line.match(/`([^`]+)`/);
-          if (orgMatch) {
-            sourceOrg = orgMatch[1];
-            break;
-          }
-        }
-      }
-      
-      // Extract target org
-      let targetOrg = 'target-org';
-      const targetSection = body.split('📥')[1] || '';
-      const targetLines = targetSection.split('\n');
-      for (const line of targetLines) {
-        if ((line.includes('- [x]') || line.includes('- [X]'))) {
-          const orgMatch = line.match(/`([^`]+)`/);
-          if (orgMatch) {
-            targetOrg = orgMatch[1];
-            break;
-          }
-        }
-      }
-      
-      core.setOutput('source_org', sourceOrg);
-      core.setOutput('target_org', targetOrg);
+name: Parse Repository List
 
-- name: Post Step 4 - Migration Instructions
-  if: success()
-  uses: actions/github-script@v8
-  env:
-    REPOSITORIES: ${{ steps.parse-repos.outputs.repo_urls }}
-    VISIBILITY: ${{ fromJSON(steps.parse-issue.outputs.jsonString)._target_repository_visibility }}
-    TARGET_ORG: ${{ steps.extract-orgs.outputs.target_org }}
-    SOURCE_ORG: ${{ steps.extract-orgs.outputs.source_org }}
-  with:
-    script: |
-      // ... Step 4 exists check ...
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  acknowledge-repo-list:
+    if: |
+      contains(github.event.issue.labels.*.name, 'migration') &&
+      contains(github.event.issue.labels.*.name, 'batch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       
-      const script = require('./.github/scripts/reporting/init-issue.js');
-      await script({github, context});
+      - name: Check if Step 3 exists (user should be at this step)
+        id: check-step
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const step3Exists = comments.data.some(c => 
+              c.body.includes('Step 3: Provide Repository URLs')
+            );
+            
+            const step4Exists = comments.data.some(c => 
+              c.body.includes('Step 4: Ready to Migrate')
+            );
+            
+            core.setOutput('step3_exists', step3Exists.toString());
+            core.setOutput('step4_exists', step4Exists.toString());
+      
+      - name: Parse issue to get visibility
+        if: |
+          steps.check-step.outputs.step3_exists == 'true' &&
+          steps.check-step.outputs.step4_exists == 'false'
+        id: parse-issue
+        uses: stefanbuck/github-issue-parser@v3
+      
+      - name: Parse and validate repository list from comment
+        if: |
+          steps.check-step.outputs.step3_exists == 'true' &&
+          steps.check-step.outputs.step4_exists == 'false'
+        id: parse-repos
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = context.payload.comment.body;
+            
+            // Skip if this is a command or bot comment
+            if (body.startsWith('/') || 
+                context.payload.comment.user.type === 'Bot') {
+              console.log('Skipping command or bot comment');
+              return;
+            }
+            
+            // Parse URLs from the comment using your existing logic
+            const cleanedText = body
+              .replace(/<details[^>]*>/gi, '')
+              .replace(/<\/details>/gi, '')
+              .replace(/<summary[^>]*>/gi, '')
+              .replace(/<\/summary>/gi, '')
+              .replace(/<!--[\s\S]*?-->/g, '');
+            
+            const repoUrls = cleanedText
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => {
+                if (!line) return false;
+                if (line.includes('<') && line.includes('>')) return false;
+                if (line.startsWith('#') && !line.includes('://')) return false;
+                return line.includes('://') || line.includes('github.');
+              });
+            
+            // Need at least one repo URL to proceed
+            if (repoUrls.length === 0) {
+              console.log('No repository URLs found in comment, skipping');
+              return;
+            }
+            
+            console.log(`Found ${repoUrls.length} repository URLs`);
+            
+            // Set output for next step
+            core.setOutput('repo_count', repoUrls.length);
+            core.setOutput('repo_urls', JSON.stringify(repoUrls));
+            
+            // Post confirmation
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### ✅ Repository List Received\n\n**Count:** ${repoUrls.length} repositories\n\n<details>\n<summary>📋 Repositories</summary>\n\n${repoUrls.map((url, i) => `${i + 1}. \`${url}\``).join('\n')}\n\n</details>\n\n---\n\n⏭️ **Proceeding to Step 4...**`
+            });
+      
+      - name: Extract selected organizations
+        if: |
+          steps.parse-repos.outputs.repo_count != '' &&
+          steps.parse-repos.outputs.repo_count != '0'
+        id: extract-orgs
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const orgComment = comments.data.find(c => 
+              c.body.includes('📤 Source Organization') && 
+              c.body.includes('📥 Target Organization')
+            );
+            
+            if (!orgComment) {
+              core.setOutput('source_org', 'source-org');
+              core.setOutput('target_org', 'target-org');
+              return;
+            }
+            
+            const body = orgComment.body;
+            
+            // Extract source org
+            let sourceOrg = 'source-org';
+            const sourceSection = body.match(/📤[\s\S]*?📥/)?.[0] || '';
+            const sourceLines = sourceSection.split('\n');
+            for (const line of sourceLines) {
+              if (line.match(/- \[[xX✓✔]\]/)) {
+                const orgMatch = line.match(/`([^`]+)`/);
+                if (orgMatch) {
+                  sourceOrg = orgMatch[1];
+                  break;
+                }
+              }
+            }
+            
+            // Extract target org
+            let targetOrg = 'target-org';
+            const targetSection = body.split('📥')[1] || '';
+            const targetLines = targetSection.split('\n');
+            for (const line of targetLines) {
+              if (line.match(/- \[[xX✓✔]\]/)) {
+                const orgMatch = line.match(/`([^`]+)`/);
+                if (orgMatch) {
+                  targetOrg = orgMatch[1];
+                  break;
+                }
+              }
+            }
+            
+            core.setOutput('source_org', sourceOrg);
+            core.setOutput('target_org', targetOrg);
+
+      - name: Post Step 4 - Migration Instructions
+        if: |
+          steps.parse-repos.outputs.repo_count != '' &&
+          steps.parse-repos.outputs.repo_count != '0'
+        uses: actions/github-script@v8
+        env:
+          REPOSITORIES: ${{ steps.parse-repos.outputs.repo_urls }}
+          VISIBILITY: ${{ fromJSON(steps.parse-issue.outputs.jsonString)._target_repository_visibility }}
+          TARGET_ORG: ${{ steps.extract-orgs.outputs.target_org }}
+          SOURCE_ORG: ${{ steps.extract-orgs.outputs.source_org }}
+        with:
+          script: |
+            // Check if Step 4 already posted
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const step4Exists = comments.data.some(c => 
+              c.body.includes('Step 4: Ready to Migrate')
+            );
+            
+            if (step4Exists) {
+              console.log('Step 4 already posted, skipping');
+              return;
+            }
+            
+            // Post Step 4
+            const script = require('./.github/scripts/reporting/init-issue.js');
+            await script({github, context});
