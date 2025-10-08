@@ -1,0 +1,69 @@
+- name: Extract selected organizations
+  id: extract-orgs
+  uses: actions/github-script@v8
+  with:
+    script: |
+      const comments = await github.rest.issues.listComments({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo
+      });
+      
+      const orgComment = comments.data.find(c => 
+        c.body.includes('📤 Source Organization') && 
+        c.body.includes('📥 Target Organization')
+      );
+      
+      if (!orgComment) {
+        core.setOutput('source_org', 'source-org');
+        core.setOutput('target_org', 'target-org');
+        return;
+      }
+      
+      const body = orgComment.body;
+      
+      // Extract source org
+      let sourceOrg = 'source-org';
+      const sourceSection = body.match(/📤[\s\S]*?📥/)?.[0] || '';
+      const sourceLines = sourceSection.split('\n');
+      for (const line of sourceLines) {
+        if ((line.includes('- [x]') || line.includes('- [X]'))) {
+          const orgMatch = line.match(/`([^`]+)`/);
+          if (orgMatch) {
+            sourceOrg = orgMatch[1];
+            break;
+          }
+        }
+      }
+      
+      // Extract target org
+      let targetOrg = 'target-org';
+      const targetSection = body.split('📥')[1] || '';
+      const targetLines = targetSection.split('\n');
+      for (const line of targetLines) {
+        if ((line.includes('- [x]') || line.includes('- [X]'))) {
+          const orgMatch = line.match(/`([^`]+)`/);
+          if (orgMatch) {
+            targetOrg = orgMatch[1];
+            break;
+          }
+        }
+      }
+      
+      core.setOutput('source_org', sourceOrg);
+      core.setOutput('target_org', targetOrg);
+
+- name: Post Step 4 - Migration Instructions
+  if: success()
+  uses: actions/github-script@v8
+  env:
+    REPOSITORIES: ${{ steps.parse-repos.outputs.repo_urls }}
+    VISIBILITY: ${{ fromJSON(steps.parse-issue.outputs.jsonString)._target_repository_visibility }}
+    TARGET_ORG: ${{ steps.extract-orgs.outputs.target_org }}
+    SOURCE_ORG: ${{ steps.extract-orgs.outputs.source_org }}
+  with:
+    script: |
+      // ... Step 4 exists check ...
+      
+      const script = require('./.github/scripts/reporting/init-issue.js');
+      await script({github, context});

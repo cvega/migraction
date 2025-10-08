@@ -1,6 +1,8 @@
 module.exports = async ({ github, context }) => {
     // Handle visibility formatting
     const visibility = process.env.VISIBILITY === 'None' ? 'Private' : process.env.VISIBILITY;
+    const targetOrg = process.env.TARGET_ORG || 'target-organization';
+    const sourceOrg = process.env.SOURCE_ORG || 'source-organization';
 
     // Get and parse repositories
     const repoText = process.env.REPOSITORIES || '';
@@ -38,7 +40,8 @@ module.exports = async ({ github, context }) => {
     // Build welcome message
     const commentBody = buildWelcomeMessage({
         numberOfRepositories,
-        targetOrg: process.env.TARGET_ORG,
+        targetOrg,
+        sourceOrg,
         visibility,
         context
     });
@@ -69,17 +72,18 @@ module.exports = async ({ github, context }) => {
 }
 
 // Helper function to build the main welcome message
-function buildWelcomeMessage({ numberOfRepositories, targetOrg, visibility, context }) {
-    return `## 🎉 Migration Request Received!
+function buildWelcomeMessage({ numberOfRepositories, targetOrg, sourceOrg, visibility, context }) {
+    return `## 🚀 Step 4: Ready to Migrate!
 
-Thank you for submitting your migration request. I've successfully parsed your issue and am ready to help you migrate your repositories.
+Your migration is fully configured and ready to execute.
 
 ### 📊 Migration Summary
 
 | Item | Details |
 |------|---------|
-| **Repositories to migrate** | ${numberOfRepositories} |
+| **Source organization** | \`${sourceOrg}\` |
 | **Target organization** | \`${targetOrg}\` |
+| **Repositories to migrate** | ${numberOfRepositories} |
 | **Repository visibility** | \`${visibility}\` |
 | **Migration ID** | #${context.issue.number} |
 
@@ -87,18 +91,15 @@ Thank you for submitting your migration request. I've successfully parsed your i
 <summary>⚠️ <b>Parsed different number of repositories?</b></summary>
 
 If the number above doesn't match your expectation:
-- Edit this issue to fix any formatting problems
 - Ensure each repository URL is on its own line
 - Remove any comments or extra text between URLs
-- Or open a new issue using the template
+- URLs must match your selected source organization
 
 </details>
 
 ---
 
-## 🚀 Ready to Migrate?
-
-Choose your migration path by commenting with one of these commands:
+## 🚀 Choose Your Migration Path
 
 ### Option 1: Test Migration (Recommended First)
 Start with a **dry-run** to validate the migration without affecting your source repositories.
@@ -112,19 +113,20 @@ Start with a **dry-run** to validate the migration without affecting your source
 - Users can continue working
 - Validates migration process
 - Identifies potential issues
+- Creates test repositories with \`-dry-run\` suffix
 
 ### Option 2: Production Migration
-Once you've validated the dry-run and notified your team, proceed with the production migration.
+Once you've validated the dry-run, proceed with the production migration.
 
 \`\`\`
 /run-production-migration
 \`\`\`
 
 **⚠️ Important:**
-- **Will lock** source repositories
+- **Will lock** source repositories during migration
 - Users cannot push changes during migration
 - Ensure team is notified
-- Have your dry-run results ready
+- Run dry-run first to validate
 
 ---
 
@@ -133,6 +135,17 @@ Once you've validated the dry-run and notified your team, proceed with the produ
 - [Migration Best Practices](https://docs.github.com/en/migrations/using-github-enterprise-importer/understanding-github-enterprise-importer/migration-best-practices)
 - [Troubleshooting Guide](https://docs.github.com/en/migrations/using-github-enterprise-importer/completing-your-migration-with-github-enterprise-importer/troubleshooting-your-migration)
 - Reply to this issue with questions
+
+---
+
+### ⚡ Available Commands
+
+| Command | Description |
+|---------|-------------|
+| \`/run-dry-run-migration\` | Start a test migration (recommended first) |
+| \`/run-production-migration\` | Start the actual migration |
+| \`/cancel-migration\` | Stop an in-progress migration |
+| \`/delete-repositories\` | Delete migrated repositories |
 
 ---
 

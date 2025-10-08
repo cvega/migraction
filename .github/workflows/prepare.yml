@@ -87,28 +87,6 @@ jobs:
             const script = require('./.github/scripts/reporting/post-org-selection.js');
             return await script({github, context});
 
-      # NEW STEP: Post next steps
-      - name: Post next steps instructions
-        if: steps.filter-orgs.outputs.has_access == 'true'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const script = require('./.github/scripts/reporting/post-next-steps.js');
-            return await script({github, context});
-        
-      # MODIFIED STEP: Remove TARGET_ORG env var since we don't know it yet
-      - name: Post migration setup instructions
-        if: steps.filter-orgs.outputs.has_access == 'true'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const script = require('./.github/scripts/reporting/init-issue.js');
-            return await script({github, context});
-        env:
-          REPOSITORIES: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._repositories }}
-          VISIBILITY: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_repository_visibility }}
-          # Removed: TARGET_ORG (not known yet)
-
       - name: Report issue parsing error
         if: ${{ failure() }}
         uses: actions/github-script@v8

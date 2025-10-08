@@ -12,30 +12,23 @@ https://github.com/your-org/repo2
 https://github.com/your-org/repo3
 \`\`\`
 
-**Format:**
-- Start with \`repos:\`
-- One URL per line
-- Full HTTPS URLs
+**Format Requirements:**
+- Start with \`repos:\` on its own line
+- One repository URL per line
+- Full HTTPS URLs (e.g., \`https://github.com/org/repo\`)
+- URLs must match your selected source organization
 
----
-
-## 🚀 Step 4: Run Migration
-
-After providing repositories, run:
-
-**Test migration (recommended first):**
+**Example:**
 \`\`\`
-/run-dry-run-migration
-\`\`\`
-
-**Production migration:**
-\`\`\`
-/run-production-migration
+repos:
+https://github.com/cloud-org-1/frontend-app
+https://github.com/cloud-org-1/backend-api
+https://github.com/cloud-org-1/mobile-app
 \`\`\`
 
 ---
 
-*Waiting for your repository list...*`;
+⏭️ **After posting your repository list, proceed to Step 4 for migration commands.**`;
 
   await github.rest.issues.createComment({
     issue_number: context.issue.number,
