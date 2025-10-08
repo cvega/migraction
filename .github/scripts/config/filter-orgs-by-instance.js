@@ -2,7 +2,7 @@ module.exports = async ({ github, context, core }) => {
   const fs = require('fs');
   
   // Load configuration
-  const config = JSON.parse(fs.readFileSync('instances.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('.github/scripts/config/instances.json', 'utf8'));
   
   // Get user who created the issue
   const username = context.payload.issue.user.login;
