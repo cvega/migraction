@@ -135,7 +135,7 @@ jobs:
           BATCH_COUNT: ${{ steps.create-batches.outputs.batch_count }}
           BATCH_SIZE: ${{ inputs.BATCH_SIZE }}
           TOTAL_REPOS: ${{ steps.create-batches.outputs.total_repos }}
-          TARGET_ORG: ${{ inputs.TARGET_ORGANIZATION }}
+          TARGET_ORG: ${{ inputs.TARGET_ORG }}
         with:
           script: |
             const script = require('./.github/scripts/reporting/start-migration.js');
@@ -185,7 +185,7 @@ jobs:
         env:
           BATCH_COUNT: ${{ needs.prepare-migration-batches.outputs.batch_count }}
           MIGRATION_TYPE: ${{ needs.prepare-migration-batches.outputs.migration_type }}
-          TARGET_ORG: ${{ inputs.TARGET_ORGANIZATION }}
+          TARGET_ORG: ${{ inputs.TARGET_ORG }}
         with:
           script: |
             const script = require('./.github/scripts/reporting/final-report.js');
