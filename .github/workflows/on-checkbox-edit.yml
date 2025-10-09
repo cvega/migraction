@@ -85,8 +85,8 @@ jobs:
               </details>
 
               📋 Proceed to Step 3 below to provide your repository URLs.`
-                    });
-                    
-                    // Post Step 3
-                    const script = require('./.github/scripts/reporting/post-next-steps.js');
-                    await script({github, context});
+            });
+            
+            // Post Step 3
+            const script = require('./.github/scripts/reporting/post-next-steps.js');
+            await script({github, context});
