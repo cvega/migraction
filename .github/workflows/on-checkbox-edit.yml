@@ -12,11 +12,22 @@ jobs:
   validate-and-post-next-step:
     if: |
       contains(github.event.issue.labels.*.name, 'migration') &&
-      contains(github.event.issue.labels.*.name, 'batch') &&
-      github.event.comment.user.type != 'Bot'
+      contains(github.event.issue.labels.*.name, 'batch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Debug - Check workflow trigger
+        uses: actions/github-script@v8
+        with:
+          script: |
+            console.log('=== WORKFLOW TRIGGERED ===');
+            console.log('Event:', context.eventName);
+            console.log('Action:', context.payload.action);
+            console.log('Issue labels:', context.payload.issue.labels.map(l => l.name));
+            console.log('Has migration label:', context.payload.issue.labels.some(l => l.name === 'migration'));
+            console.log('Has batch label:', context.payload.issue.labels.some(l => l.name === 'batch'));
+            console.log('=== END ===');
       
       - name: Debug - Show comment info
         uses: actions/github-script@v8

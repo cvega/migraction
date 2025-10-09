@@ -2,9 +2,20 @@ module.exports = async ({ github, context, core }) => {
   const { parseOrgSelections } = require('../utils/common.js');
   
   const commentBody = context.payload.comment.body;
+  const commentUser = context.payload.comment.user;
   
   console.log('=== VALIDATION START ===');
+  console.log('Comment user:', commentUser.login);
+  console.log('Comment user type:', commentUser.type);
   console.log('Comment length:', commentBody.length);
+  
+  // Skip bot comments
+  if (commentUser.type === 'Bot' || commentUser.login.includes('[bot]')) {
+    console.log('⏭️ Skipping bot comment');
+    core.setOutput('is_org_comment', 'false');
+    return;
+  }
+  
   console.log('Has 📤:', commentBody.includes('📤 Source Organization'));
   console.log('Has 📥:', commentBody.includes('📥 Target Organization'));
   
