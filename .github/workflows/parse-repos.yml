@@ -63,7 +63,7 @@ jobs:
               return;
             }
             
-            // Parse URLs from the comment using your existing logic
+            // Parse URLs from the comment
             const cleanedText = body
               .replace(/<details[^>]*>/gi, '')
               .replace(/<\/details>/gi, '')
@@ -93,15 +93,39 @@ jobs:
             core.setOutput('repo_count', repoUrls.length);
             core.setOutput('repo_urls', JSON.stringify(repoUrls));
             
-            // Post confirmation
+            // Create repo state object
+            const repoState = {
+              repositories: repoUrls,
+              count: repoUrls.length,
+              timestamp: new Date().toISOString()
+            };
+            
+            // Post confirmation with JSON
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `### ✅ Repository List Received\n\n**Count:** ${repoUrls.length} repositories\n\n<details>\n<summary>📋 Repositories</summary>\n\n${repoUrls.map((url, i) => `${i + 1}. \`${url}\``).join('\n')}\n\n</details>\n\n---\n\n⏭️ **Proceeding to Step 4...**`
+              body: `### ✅ Repository List Received
+
+                **Count:** ${repoUrls.length} repositories
+
+                <details>
+                <summary>📋 Repositories</summary>
+
+                ${repoUrls.map((url, i) => `${i + 1}. \`${url}\``).join('\n')}
+
+                \`\`\`json
+                ${JSON.stringify(repoState, null, 2)}
+                \`\`\`
+
+                </details>
+
+                ---
+
+                ⏭️ **Proceeding to Step 4...**`
             });
       
-      - name: Extract selected organizations
+      - name: Extract selected organizations from JSON state
         if: |
           steps.parse-repos.outputs.repo_count != '' &&
           steps.parse-repos.outputs.repo_count != '0'
@@ -115,49 +139,35 @@ jobs:
               repo: context.repo.repo
             });
             
-            const orgComment = comments.data.find(c => 
-              c.body.includes('📤 Source Organization') && 
-              c.body.includes('📥 Target Organization')
+            // Find the state comment with JSON
+            const stateComment = comments.data.find(c => 
+              c.body.includes('✅ Organizations Selected') &&
+              c.body.includes('📊 Configuration Data')
             );
             
-            if (!orgComment) {
+            if (!stateComment) {
+              console.log('No org state found, using defaults');
               core.setOutput('source_org', 'source-org');
               core.setOutput('target_org', 'target-org');
               return;
             }
             
-            const body = orgComment.body;
+            // Extract JSON from comment
+            const jsonMatch = stateComment.body.match(/```json\n([\s\S]*?)\n```/);
             
-            // Extract source org
-            let sourceOrg = 'source-org';
-            const sourceSection = body.match(/📤[\s\S]*?📥/)?.[0] || '';
-            const sourceLines = sourceSection.split('\n');
-            for (const line of sourceLines) {
-              if (line.match(/- \[[xX✓✔]\]/)) {
-                const orgMatch = line.match(/`([^`]+)`/);
-                if (orgMatch) {
-                  sourceOrg = orgMatch[1];
-                  break;
-                }
-              }
+            if (!jsonMatch) {
+              console.log('Could not parse JSON from state comment');
+              core.setOutput('source_org', 'source-org');
+              core.setOutput('target_org', 'target-org');
+              return;
             }
             
-            // Extract target org
-            let targetOrg = 'target-org';
-            const targetSection = body.split('📥')[1] || '';
-            const targetLines = targetSection.split('\n');
-            for (const line of targetLines) {
-              if (line.match(/- \[[xX✓✔]\]/)) {
-                const orgMatch = line.match(/`([^`]+)`/);
-                if (orgMatch) {
-                  targetOrg = orgMatch[1];
-                  break;
-                }
-              }
-            }
+            const state = JSON.parse(jsonMatch[1]);
             
-            core.setOutput('source_org', sourceOrg);
-            core.setOutput('target_org', targetOrg);
+            console.log(`Extracted from JSON: ${state.sourceOrg} → ${state.targetOrg}`);
+            
+            core.setOutput('source_org', state.sourceOrg);
+            core.setOutput('target_org', state.targetOrg);
 
       - name: Post Step 4 - Migration Instructions
         if: |
@@ -191,7 +201,7 @@ jobs:
             const repoUrls = JSON.parse(process.env.REPO_URLS_JSON);
             const repoText = repoUrls.join('\n');
             
-            // Set REPOSITORIES env var with the text format
+            // Set REPOSITORIES env var with the text format (for backward compat with init-issue.js)
             process.env.REPOSITORIES = repoText;
             
             console.log(`Passing ${repoUrls.length} repos to init-issue.js`);

@@ -1,68 +1,65 @@
-name: Handle Org Selection
-
-on:
-  issue_comment:
-    types: [edited]
-
-permissions:
-  contents: read
-  issues: write
-
-jobs:
-  validate-and-post-next-step:
-    if: |
-      contains(github.event.issue.labels.*.name, 'migration') &&
-      contains(github.event.issue.labels.*.name, 'batch')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+- name: Post Step 3 if valid selection
+  if: |
+    steps.validate.outputs.is_org_comment == 'true' &&
+    steps.validate.outputs.is_valid == 'true'
+  uses: actions/github-script@v8
+  env:
+    SOURCE_INSTANCE: ${{ steps.validate.outputs.source_instance }}
+    SOURCE_ORG: ${{ steps.validate.outputs.source_org }}
+    SOURCE_HOSTNAME: ${{ steps.validate.outputs.source_hostname }}
+    TARGET_INSTANCE: ${{ steps.validate.outputs.target_instance }}
+    TARGET_ORG: ${{ steps.validate.outputs.target_org }}
+    TARGET_HOSTNAME: ${{ steps.validate.outputs.target_hostname }}
+  with:
+    script: |
+      const comments = await github.rest.issues.listComments({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo
+      });
       
-      - name: Validate checkbox selection
-        id: validate
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const script = require('./.github/scripts/config/validate-checkbox-selection.js');
-            return await script({github, context, core});
+      const step3Exists = comments.data.some(c => 
+        c.body.includes('Step 3: Provide Repository URLs')
+      );
+      
+      if (step3Exists) {
+        console.log('Step 3 already posted');
+        return;
+      }
+      
+      // Create state object
+      const state = {
+        sourceInstance: process.env.SOURCE_INSTANCE,
+        sourceOrg: process.env.SOURCE_ORG,
+        sourceHostname: process.env.SOURCE_HOSTNAME,
+        targetInstance: process.env.TARGET_INSTANCE,
+        targetOrg: process.env.TARGET_ORG,
+        targetHostname: process.env.TARGET_HOSTNAME,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Post confirmation with JSON
+      await github.rest.issues.createComment({
+        issue_number: context.issue.number,
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        body: `### ✅ Organizations Selected
 
-      - name: Post Step 3 if valid selection
-        if: |
-          steps.validate.outputs.is_org_comment == 'true' &&
-          steps.validate.outputs.is_valid == 'true'
-        uses: actions/github-script@v8
-        env:
-          SOURCE_INSTANCE: ${{ steps.validate.outputs.source_instance }}
-          SOURCE_ORG: ${{ steps.validate.outputs.source_org }}
-          SOURCE_HOSTNAME: ${{ steps.validate.outputs.source_hostname }}
-          TARGET_INSTANCE: ${{ steps.validate.outputs.target_instance }}
-          TARGET_ORG: ${{ steps.validate.outputs.target_org }}
-          TARGET_HOSTNAME: ${{ steps.validate.outputs.target_hostname }}
-        with:
-          script: |
-            // Check if Step 3 was already posted
-            const comments = await github.rest.issues.listComments({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            
-            const step3Exists = comments.data.some(c => 
-              c.body.includes('Step 3: Provide Repository URLs')
-            );
-            
-            if (step3Exists) {
-              console.log('Step 3 already posted, skipping');
-              return;
-            }
-            
-            // POST CONFIRMATION FIRST (swapped order)
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `### ✅ Organizations Selected\n\n**Source:** \`${process.env.SOURCE_ORG}\` @ \`${process.env.SOURCE_HOSTNAME}\`\n**Target:** \`${process.env.TARGET_ORG}\` @ \`${process.env.TARGET_HOSTNAME}\`\n\n📋 Proceed to Step 3 below to provide your repository URLs.`
-            });
-            
-            // THEN POST STEP 3 (swapped order)
-            const script = require('./.github/scripts/reporting/post-next-steps.js');
-            await script({github, context});
+        **Source:** \`${state.sourceOrg}\` @ \`${state.sourceHostname}\`
+        **Target:** \`${state.targetOrg}\` @ \`${state.targetHostname}\`
+
+        <details>
+        <summary>📊 Configuration Data</summary>
+
+        \`\`\`json
+        ${JSON.stringify(state, null, 2)}
+        \`\`\`
+
+        </details>
+
+        📋 Proceed to Step 3 below to provide your repository URLs.`
+      });
+              
+      // Post Step 3
+      const script = require('./.github/scripts/reporting/post-next-steps.js');
+      await script({github, context});
