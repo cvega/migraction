@@ -60,8 +60,6 @@ jobs:
       BATCH_SIZE: 250
       MIGRATION_TYPE: ${{ contains(github.event.comment.body, 'dry-run') && 'dry-run' || 'production' }}
     secrets:
-      TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
-      SOURCE_ADMIN_TOKEN: ${{ secrets.SOURCE_ADMIN_TOKEN }}
       GITHUB_COM_CLOUD_TOKEN: ${{ secrets.GITHUB_COM_CLOUD_TOKEN }}
       GHES_PROD_COMPANY_COM_TOKEN: ${{ secrets.GHES_PROD_COMPANY_COM_TOKEN }}
       GITHUB_COM_EMU_TOKEN: ${{ secrets.GITHUB_COM_EMU_TOKEN }}
