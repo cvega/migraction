@@ -100,29 +100,33 @@ jobs:
               timestamp: new Date().toISOString()
             };
             
+            // Build comment body with properly escaped backticks
+            const repoList = repoUrls.map((url, i) => `${i + 1}. \`${url}\``).join('\n');
+            const jsonBlock = '```json\n' + JSON.stringify(repoState, null, 2) + '\n```';
+            
+            const commentBody = `### ✅ Repository List Received
+
+**Count:** ${repoUrls.length} repositories
+
+<details>
+<summary>📋 Repositories</summary>
+
+${repoList}
+
+${jsonBlock}
+
+</details>
+
+---
+
+⏭️ **Proceeding to Step 4...**`;
+            
             // Post confirmation with JSON
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `### ✅ Repository List Received
-
-                **Count:** ${repoUrls.length} repositories
-
-                <details>
-                <summary>📋 Repositories</summary>
-
-                ${repoUrls.map((url, i) => `${i + 1}. \`${url}\``).join('\n')}
-
-                \`\`\`json
-                ${JSON.stringify(repoState, null, 2)}
-                \`\`\`
-
-                </details>
-
-                ---
-
-                ⏭️ **Proceeding to Step 4...**`
+              body: commentBody
             });
       
       - name: Extract selected organizations from JSON state
