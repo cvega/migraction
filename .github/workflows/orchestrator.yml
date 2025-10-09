@@ -31,12 +31,11 @@ on:
         required: true
         type: string
     secrets:
-      secrets:
-      GITHUB_COM_CLOUD_TOKEN:
+      GHEC_CLOUD_TOKEN:
         required: false
-      GHES_PROD_COMPANY_COM_TOKEN:
+      GHES_PROD_TOKEN:
         required: false
-      GITHUB_COM_EMU_TOKEN:
+      GHEC_EMU_TOKEN:
         required: false
       AZURE_STORAGE_CONNECTION_STRING:
         required: false
@@ -64,9 +63,9 @@ jobs:
           SOURCE_INSTANCE: ${{ inputs.SOURCE_INSTANCE }}
           TARGET_INSTANCE: ${{ inputs.TARGET_INSTANCE }}
           # Make all secrets available for dynamic lookup
-          GITHUB_COM_CLOUD_TOKEN: ${{ secrets.GITHUB_COM_CLOUD_TOKEN }}
-          GHES_PROD_COMPANY_COM_TOKEN: ${{ secrets.GHES_PROD_COMPANY_COM_TOKEN }}
-          GITHUB_COM_EMU_TOKEN: ${{ secrets.GITHUB_COM_EMU_TOKEN }}
+          GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
+          GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
+          GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
         with:
           script: |
             const script = require('./.github/scripts/config/resolve-tokens.js');

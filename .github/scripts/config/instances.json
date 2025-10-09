@@ -2,7 +2,7 @@
   "sources": {
     "GHEC": {
       "hostname": "github.com",
-      "tokenSecret": "GITHUB_COM_CLOUD_TOKEN",
+      "tokenSecret": "GHEC_CLOUD_TOKEN",
       "orgs": {
         "casa-vega": {
           "allowedUsers": ["cvega", "bob", "migration-team"]
@@ -14,7 +14,7 @@
     },
     "GHES": {
       "hostname": "ghes-prod.company.com",
-      "tokenSecret": "GHES_PROD_COMPANY_COM_TOKEN",
+      "tokenSecret": "GHES_PROD_TOKEN",
       "orgs": {
         "on-prem-org-1": {
           "allowedUsers": ["bob", "charlie", "migration-team"]
@@ -28,7 +28,7 @@
   "targets": {
     "GHEC EMU": {
       "hostname": "github.com",
-      "tokenSecret": "GITHUB_COM_EMU_TOKEN",
+      "tokenSecret": "GHEC_EMU_TOKEN",
       "orgs": {
         "migration-demo-emu": {
           "allowedUsers": ["cvega", "migration-team"]
