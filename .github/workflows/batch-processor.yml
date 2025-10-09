@@ -75,10 +75,10 @@ jobs:
             
             core.setSecret(sourceToken);
             core.setSecret(targetToken);
-            core.exportVariable('GH_SOURCE_PAT', sourceToken);
-            core.exportVariable('GH_PAT', targetToken);
+            core.setOutput('source_token', sourceToken);
+            core.setOutput('target_token', targetToken);
             
-            console.log('✅ Tokens resolved and exported as GH_SOURCE_PAT and GH_PAT');
+            console.log('✅ Tokens resolved for GH_SOURCE_PAT and GH_PAT');
 
       - name: Extract repository name and path
         id: repo-info
@@ -121,8 +121,8 @@ jobs:
           
           node "${ARGS[@]}"
         env:
-          GH_PAT: ${{ secrets.TARGET_ADMIN_TOKEN }}
-          GH_SOURCE_PAT: ${{ secrets.SOURCE_ADMIN_TOKEN }}
+          GH_PAT: ${{ steps.resolve-tokens.outputs.target_token }}
+          GH_SOURCE_PAT: ${{ steps.resolve-tokens.outputs.source_token }}
 
       - name: Detect features requiring additional migration steps
         id: migration-checks
