@@ -1,6 +1,6 @@
 module.exports = async ({ core }) => {
   const fs = require('fs');
-  const config = JSON.parse(fs.readFileSync('.github/config/instances.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('.github/scripts/config/instances.json', 'utf8'));
   
   const sourceInstance = process.env.SOURCE_INSTANCE;
   const targetInstance = process.env.TARGET_INSTANCE;

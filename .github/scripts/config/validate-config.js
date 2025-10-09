@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 try {
-  const config = JSON.parse(fs.readFileSync('.github/config/instances.json', 'utf8'));
+  const config = JSON.parse(fs.readFileSync('.github/scripts/config/instances.json', 'utf8'));
   
   console.log('✓ Configuration file is valid JSON');
   
