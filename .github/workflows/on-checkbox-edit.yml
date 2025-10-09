@@ -35,8 +35,9 @@ jobs:
           script: |
             console.log('=== DEBUG: Comment Event ===');
             console.log('Action:', context.payload.action);
-            console.log('Comment user:', context.payload.comment.user.login);
-            console.log('Comment user type:', context.payload.comment.user.type);
+            console.log('Actor (who triggered):', context.actor);
+            console.log('Comment author:', context.payload.comment.user.login);
+            console.log('Comment author type:', context.payload.comment.user.type);
             console.log('Comment ID:', context.payload.comment.id);
             console.log('Has checkboxes:', context.payload.comment.body.includes('- ['));
             console.log('Comment preview (first 500 chars):');

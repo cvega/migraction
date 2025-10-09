@@ -3,15 +3,17 @@ module.exports = async ({ github, context, core }) => {
   
   const commentBody = context.payload.comment.body;
   const commentUser = context.payload.comment.user;
+  const actor = context.actor; // The person who triggered this event
   
   console.log('=== VALIDATION START ===');
-  console.log('Comment user:', commentUser.login);
-  console.log('Comment user type:', commentUser.type);
+  console.log('Comment author:', commentUser.login, '(type:', commentUser.type + ')');
+  console.log('Event triggered by:', actor);
   console.log('Comment length:', commentBody.length);
   
-  // Skip bot comments
-  if (commentUser.type === 'Bot' || commentUser.login.includes('[bot]')) {
-    console.log('⏭️ Skipping bot comment');
+  // Skip if the EVENT was triggered by a bot (not just if comment was authored by bot)
+  // When a user edits a bot's comment, actor will be the user, not the bot
+  if (actor.includes('[bot]') || actor === 'github-actions') {
+    console.log('⏭️ Skipping - event triggered by bot');
     core.setOutput('is_org_comment', 'false');
     return;
   }
