@@ -30,19 +30,6 @@ on:
       MIGRATION_TYPE:
         required: true
         type: string
-    secrets:
-      GHEC_CLOUD_TOKEN:
-        required: false
-      GHES_PROD_TOKEN:
-        required: false
-      GHEC_EMU_TOKEN:
-        required: false
-      AZURE_STORAGE_CONNECTION_STRING:
-        required: false
-      AWS_ACCESS_KEY_ID:
-        required: false
-      AWS_SECRET_ACCESS_KEY:
-        required: false
 
 jobs:
   resolve-tokens:
