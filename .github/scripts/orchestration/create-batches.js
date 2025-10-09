@@ -48,6 +48,8 @@ module.exports = async ({ context, core }) => {
             migrationType: process.env.MIGRATION_TYPE,
             sourceOrganization: process.env.SOURCE_ORG,
             targetOrganization: process.env.TARGET_ORG,
+            sourceInstance: process.env.SOURCE_INSTANCE,
+            targetInstance: process.env.TARGET_INSTANCE,
             targetRepositoryVisibility: process.env.VISIBILITY,
             installPrereqs: process.env.INSTALL_PREREQS,
             batchId: `batch-${i + 1}-${Date.now()}`,

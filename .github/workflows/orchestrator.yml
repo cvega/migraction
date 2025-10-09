@@ -109,6 +109,8 @@ jobs:
           MIGRATION_TYPE: ${{ inputs.MIGRATION_TYPE }}
           SOURCE_ORG: ${{ inputs.SOURCE_ORG }}
           TARGET_ORG: ${{ inputs.TARGET_ORG }}
+          SOURCE_INSTANCE: ${{ inputs.SOURCE_INSTANCE }}
+          TARGET_INSTANCE: ${{ inputs.TARGET_INSTANCE }}
           VISIBILITY: ${{ fromJSON(steps.parse-issue-body.outputs.jsonString)._target_repository_visibility }}
           INSTALL_PREREQS: ${{ inputs.INSTALL_PREREQS }}
             
