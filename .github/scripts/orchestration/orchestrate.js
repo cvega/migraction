@@ -1,5 +1,24 @@
 module.exports = async ({ github, context }) => {
+    const fs = require('fs');
     const batches = JSON.parse(process.env.BATCHES);
+
+    // Resolve target token from TARGET_INSTANCE
+    const targetInstance = process.env.TARGET_INSTANCE;
+    const config = JSON.parse(fs.readFileSync('.github/scripts/config/instances.json', 'utf8'));
+    const targetConfig = config.targets[targetInstance];
+    
+    if (!targetConfig) {
+        throw new Error(`Unknown target instance: ${targetInstance}`);
+    }
+    
+    const targetTokenName = targetConfig.tokenSecret;
+    const targetToken = process.env[targetTokenName];
+    
+    if (!targetToken) {
+        throw new Error(`Token ${targetTokenName} not found for target instance ${targetInstance}`);
+    }
+    
+    console.log(`Using token ${targetTokenName} for target instance ${targetInstance}`);
 
     // Function to check if workflow is being cancelled
     async function isWorkflowCancelled() {
@@ -183,14 +202,12 @@ ${batch.repositories.map((repo, index) => `${index + 1}. \`${repo}\``).join('\n'
             };
 
             console.log('Dispatching batch with ID:', batchId);
-            console.log('TARGET_ADMIN_TOKEN exists:', !!process.env.TARGET_ADMIN_TOKEN);
-            console.log('TARGET_ADMIN_TOKEN length:', process.env.TARGET_ADMIN_TOKEN?.length || 0);
 
             // Use fetch directly instead of octokit
             const response = await fetch(`https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/dispatches`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `token ${process.env.TARGET_ADMIN_TOKEN}`,
+                    'Authorization': `token ${targetToken}`,
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json',
                     'User-Agent': 'GitHub Actions'

@@ -48,7 +48,6 @@ jobs:
         env:
           SOURCE_INSTANCE: ${{ inputs.SOURCE_INSTANCE }}
           TARGET_INSTANCE: ${{ inputs.TARGET_INSTANCE }}
-          # Make all secrets available for dynamic lookup
           GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
           GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
           GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
@@ -138,7 +137,10 @@ jobs:
         uses: actions/github-script@v8
         env:
           BATCHES: ${{ needs.prepare-migration-batches.outputs.batches }}
-          TARGET_ADMIN_TOKEN: ${{ needs.resolve-tokens.outputs.target_token }}
+          TARGET_INSTANCE: ${{ inputs.TARGET_INSTANCE }}
+          GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
+          GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
+          GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
         with:
           script: |
             const script = require('./.github/scripts/orchestration/orchestrate.js');
