@@ -4,7 +4,7 @@ const fs = require('fs');
  * Load instances.json config
  */
 function loadConfig() {
-  return JSON.parse(fs.readFileSync('.github/config/instances.json', 'utf8'));
+  return JSON.parse(fs.readFileSync('.github/scripts/config/instances.json', 'utf8'));
 }
 
 /**
