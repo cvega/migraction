@@ -54,7 +54,6 @@ jobs:
               return;
             }
             
-            // Create state object
             const state = {
               sourceInstance: process.env.SOURCE_INSTANCE,
               sourceOrg: process.env.SOURCE_ORG,
@@ -65,28 +64,27 @@ jobs:
               timestamp: new Date().toISOString()
             };
             
+            // Build JSON block properly (avoiding backtick escaping issues)
+            const jsonBlock = '```json\n' + JSON.stringify(state, null, 2) + '\n```';
+            
             // Post confirmation with JSON
+            const commentBody = `### ✅ Organizations Selected
+
+**Source:** \`${state.sourceOrg}\` @ \`${state.sourceHostname}\`
+**Target:** \`${state.targetOrg}\` @ \`${state.targetHostname}\`
+
+<details>
+<summary>📊 Configuration Data</summary>
+
+${jsonBlock}
+
+</details>
+
+📋 Proceed to Step 3 below to provide your repository URLs.`;
+            
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `### ✅ Organizations Selected
-
-              **Source:** \`${state.sourceOrg}\` @ \`${state.sourceHostname}\`
-              **Target:** \`${state.targetOrg}\` @ \`${state.targetHostname}\`
-
-              <details>
-              <summary>📊 Configuration Data</summary>
-
-              \`\`\`json
-              ${JSON.stringify(state, null, 2)}
-              \`\`\`
-
-              </details>
-
-              📋 Proceed to Step 3 below to provide your repository URLs.`
+              body: commentBody
             });
-            
-            // Post Step 3
-            const script = require('./.github/scripts/reporting/post-next-steps.js');
-            await script({github, context});
