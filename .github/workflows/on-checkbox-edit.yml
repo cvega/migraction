@@ -88,3 +88,6 @@ jobs:
               repo: context.repo.repo,
               body: commentBody
             });
+
+            const script = require('./.github/scripts/reporting/post-next-steps.js');
+            await script({github, context});
