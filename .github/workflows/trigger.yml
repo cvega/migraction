@@ -10,12 +10,51 @@ permissions:
   actions: write
 
 jobs:
+  validate-complete-setup:
+    if: |
+      contains(github.event.comment.body, '/run-dry-run-migration') ||
+      contains(github.event.comment.body, '/run-production-migration')
+    runs-on: ubuntu-latest
+    outputs:
+      source_instance: ${{ steps.validate.outputs.source_instance }}
+      source_org: ${{ steps.validate.outputs.source_org }}
+      target_instance: ${{ steps.validate.outputs.target_instance }}
+      target_org: ${{ steps.validate.outputs.target_org }}
+      repository_urls: ${{ steps.validate.outputs.repository_urls }}
+      repository_count: ${{ steps.validate.outputs.repository_count }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate complete setup
+        id: validate
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const script = require('./.github/scripts/config/validate-complete-setup.js');
+            return await script({github, context, core});
+      
+      - name: Debug - Show validation outputs
+        uses: actions/github-script@v8
+        with:
+          script: |
+            console.log('=== VALIDATION OUTPUTS ===');
+            console.log('source_instance:', '${{ steps.validate.outputs.source_instance }}');
+            console.log('source_org:', '${{ steps.validate.outputs.source_org }}');
+            console.log('target_instance:', '${{ steps.validate.outputs.target_instance }}');
+            console.log('target_org:', '${{ steps.validate.outputs.target_org }}');
+            console.log('repository_count:', '${{ steps.validate.outputs.repository_count }}');
+            console.log('repository_urls length:', '${{ steps.validate.outputs.repository_urls }}'.length);
+            console.log('=== END ===');
+
   initiate-migration-orchestration:
-    if: contains(github.event.comment.body, '/run-dry-run-migration') ||
-        contains(github.event.comment.body, '/run-production-migration')
+    needs: [validate-complete-setup]
     uses: ./.github/workflows/orchestrator.yml
     with:
-      TARGET_ORGANIZATION: ${{ vars.TARGET_ORGANIZATION }}
+      SOURCE_INSTANCE: ${{ needs.validate-complete-setup.outputs.source_instance }}
+      SOURCE_ORG: ${{ needs.validate-complete-setup.outputs.source_org }}
+      TARGET_INSTANCE: ${{ needs.validate-complete-setup.outputs.target_instance }}
+      TARGET_ORG: ${{ needs.validate-complete-setup.outputs.target_org }}
+      REPOSITORY_URLS: ${{ needs.validate-complete-setup.outputs.repository_urls }}
       RUNNER: ubuntu-latest
       INSTALL_PREREQS: ${{ vars.INSTALL_PREREQS }}
       BATCH_SIZE: 250
@@ -23,6 +62,9 @@ jobs:
     secrets:
       TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
       SOURCE_ADMIN_TOKEN: ${{ secrets.SOURCE_ADMIN_TOKEN }}
+      GITHUB_COM_CLOUD_TOKEN: ${{ secrets.GITHUB_COM_CLOUD_TOKEN }}
+      GHES_PROD_COMPANY_COM_TOKEN: ${{ secrets.GHES_PROD_COMPANY_COM_TOKEN }}
+      GITHUB_COM_EMU_TOKEN: ${{ secrets.GITHUB_COM_EMU_TOKEN }}
       AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}      
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

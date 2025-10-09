@@ -60,12 +60,26 @@ jobs:
         id: determine-type
         run: |
           echo "type=${{ inputs.MIGRATION_TYPE }}" >> $GITHUB_OUTPUT
-        
+
+      - name: Debug - Show inputs
+        run: |
+          echo "=== ORCHESTRATOR INPUTS ==="
+          echo "SOURCE_ORG: ${{ inputs.SOURCE_ORG }}"
+          echo "TARGET_ORG: ${{ inputs.TARGET_ORG }}"
+          echo "REPOSITORY_URLS length: ${{ inputs.REPOSITORY_URLS }}"
+          echo "=== END ==="
+
       - name: Split repositories into batches of ${{ inputs.BATCH_SIZE }}
         id: create-batches
         uses: actions/github-script@v8
         with:
           script: |
+            console.log('=== CREATE BATCHES DEBUG ===');
+            console.log('REPOS env var:', process.env.REPOS?.substring(0, 200));
+            console.log('SOURCE_ORG:', process.env.SOURCE_ORG);
+            console.log('TARGET_ORG:', process.env.TARGET_ORG);
+            console.log('=== END DEBUG ===');
+            
             const script = require('./.github/scripts/orchestration/create-batches.js');
             return await script({context, core});
         env:
