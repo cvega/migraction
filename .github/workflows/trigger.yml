@@ -60,9 +60,9 @@ jobs:
       BATCH_SIZE: 250
       MIGRATION_TYPE: ${{ contains(github.event.comment.body, 'dry-run') && 'dry-run' || 'production' }}
     secrets:
-      GITHUB_COM_CLOUD_TOKEN: ${{ secrets.GITHUB_COM_CLOUD_TOKEN }}
-      GHES_PROD_COMPANY_COM_TOKEN: ${{ secrets.GHES_PROD_COMPANY_COM_TOKEN }}
-      GITHUB_COM_EMU_TOKEN: ${{ secrets.GITHUB_COM_EMU_TOKEN }}
+      GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
+      GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
+      GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
       AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}      
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
