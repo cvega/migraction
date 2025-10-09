@@ -70,17 +70,17 @@ jobs:
             // Post confirmation with JSON
             const commentBody = `### ✅ Organizations Selected
 
-**Source:** \`${state.sourceOrg}\` @ \`${state.sourceHostname}\`
-**Target:** \`${state.targetOrg}\` @ \`${state.targetHostname}\`
+              **Source:** \`${state.sourceOrg}\` @ \`${state.sourceHostname}\`
+              **Target:** \`${state.targetOrg}\` @ \`${state.targetHostname}\`
 
-<details>
-<summary>📊 Configuration Data</summary>
+              <details>
+              <summary>📊 Configuration Data</summary>
 
-${jsonBlock}
+              ${jsonBlock}
 
-</details>
+              </details>
 
-📋 Proceed to Step 3 below to provide your repository URLs.`;
+              📋 Proceed to Step 3 below to provide your repository URLs.`;
             
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
