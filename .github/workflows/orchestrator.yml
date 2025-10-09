@@ -36,7 +36,6 @@ jobs:
     name: Resolve Environment Tokens
     runs-on: ${{ inputs.RUNNER }}
     outputs:
-      source_token: ${{ steps.resolve.outputs.source_token }}
       target_token: ${{ steps.resolve.outputs.target_token }}
       source_hostname: ${{ steps.resolve.outputs.source_hostname }}
       target_hostname: ${{ steps.resolve.outputs.target_hostname }}
@@ -129,7 +128,7 @@ jobs:
 
   orchestrate-batch-execution:
     name: Orchestrate sequential batch execution
-    needs: [prepare-migration-batches]
+    needs: [prepare-migration-batches, resolve-tokens]
     if: always() && needs.prepare-migration-batches.result == 'success'
     runs-on: ${{ inputs.RUNNER }}
     timeout-minutes: 50400
@@ -139,7 +138,7 @@ jobs:
         uses: actions/github-script@v8
         env:
           BATCHES: ${{ needs.prepare-migration-batches.outputs.batches }}
-          TARGET_ADMIN_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          TARGET_ADMIN_TOKEN: ${{ needs.resolve-tokens.outputs.target_token }}
         with:
           script: |
             const script = require('./.github/scripts/orchestration/orchestrate.js');

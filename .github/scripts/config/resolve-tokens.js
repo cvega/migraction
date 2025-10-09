@@ -54,7 +54,6 @@ module.exports = async ({ core }) => {
   console.log(`✅ Tokens resolved successfully`);
   
   // Set outputs
-  core.setOutput('source_token', sourceToken);
   core.setOutput('target_token', targetToken);
   core.setOutput('source_hostname', sourceConfig.hostname);
   core.setOutput('target_hostname', targetConfig.hostname);

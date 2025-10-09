@@ -183,6 +183,8 @@ ${batch.repositories.map((repo, index) => `${index + 1}. \`${repo}\``).join('\n'
             };
 
             console.log('Dispatching batch with ID:', batchId);
+            console.log('TARGET_ADMIN_TOKEN exists:', !!process.env.TARGET_ADMIN_TOKEN);
+            console.log('TARGET_ADMIN_TOKEN length:', process.env.TARGET_ADMIN_TOKEN?.length || 0);
 
             // Use fetch directly instead of octokit
             const response = await fetch(`https://api.github.com/repos/${context.repo.owner}/${context.repo.repo}/dispatches`, {
