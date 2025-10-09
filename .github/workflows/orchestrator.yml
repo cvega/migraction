@@ -3,39 +3,75 @@ name: Migration Orchestrator (Repository Dispatch)
 on:
   workflow_call:
     inputs:
-      TARGET_ORGANIZATION:
-        description: 'The GitHub Enterprise Cloud organization to migrate to'
+      SOURCE_INSTANCE:
+        required: true
+        type: string
+      SOURCE_ORG:
+        required: true
+        type: string
+      TARGET_INSTANCE:
+        required: true
+        type: string
+      TARGET_ORG:
+        required: true
+        type: string
+      REPOSITORY_URLS:
         required: true
         type: string
       RUNNER:
-        description: 'The runner to use for all of the jobs in the workflow'
         type: string
         default: 'ubuntu-latest'
       INSTALL_PREREQS:
-        description: 'If set to true, installs pre-requisites from apt, pwsh, and gei'
         type: string
         default: 'true'
       BATCH_SIZE:
-        description: 'Number of repositories per batch'
         type: number
         default: 250
       MIGRATION_TYPE:
-        description: 'Type of migration (dry-run or production)'
         required: true
         type: string
     secrets:
-      TARGET_ADMIN_TOKEN:
-        required: true
-      SOURCE_ADMIN_TOKEN:
-        required: true
+      secrets:
+      GITHUB_COM_CLOUD_TOKEN:
+        required: false
+      GHES_PROD_COMPANY_COM_TOKEN:
+        required: false
+      GITHUB_COM_EMU_TOKEN:
+        required: false
       AZURE_STORAGE_CONNECTION_STRING:
-        required: true
+        required: false
       AWS_ACCESS_KEY_ID:
-        required: true
+        required: false
       AWS_SECRET_ACCESS_KEY:
-        required: true
+        required: false
 
 jobs:
+  resolve-tokens:
+    name: Resolve Environment Tokens
+    runs-on: ${{ inputs.RUNNER }}
+    outputs:
+      source_token: ${{ steps.resolve.outputs.source_token }}
+      target_token: ${{ steps.resolve.outputs.target_token }}
+      source_hostname: ${{ steps.resolve.outputs.source_hostname }}
+      target_hostname: ${{ steps.resolve.outputs.target_hostname }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Resolve tokens from config
+        id: resolve
+        uses: actions/github-script@v8
+        env:
+          SOURCE_INSTANCE: ${{ inputs.SOURCE_INSTANCE }}
+          TARGET_INSTANCE: ${{ inputs.TARGET_INSTANCE }}
+          # Make all secrets available for dynamic lookup
+          GITHUB_COM_CLOUD_TOKEN: ${{ secrets.GITHUB_COM_CLOUD_TOKEN }}
+          GHES_PROD_COMPANY_COM_TOKEN: ${{ secrets.GHES_PROD_COMPANY_COM_TOKEN }}
+          GITHUB_COM_EMU_TOKEN: ${{ secrets.GITHUB_COM_EMU_TOKEN }}
+        with:
+          script: |
+            const script = require('./.github/scripts/config/resolve-tokens.js');
+            return await script({core});
+
   prepare-migration-batches:
     name: Prepare Migration Batches
     runs-on: ${{ inputs.RUNNER }}
