@@ -10,7 +10,7 @@ module.exports = async ({ github, context }) => {
   let body = `## 📋 Step 2: Select Organizations\n\n`;
   body += `Hey @${context.payload.issue.user.login}! Based on your permissions:\n\n`;
   
-  body += `### � Source Organization\n\n`;
+  body += `### 📤 Source Organization\n\n`;
   body += `**${sourceInstance}** (\`${sourceHostname}\`)\n\n`;
   body += `Select **ONE** organization:\n\n`;
   sourceOrgs.forEach(org => {
