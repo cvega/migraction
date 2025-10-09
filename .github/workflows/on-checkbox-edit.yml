@@ -2,7 +2,7 @@ name: Handle Org Selection
 
 on:
   issue_comment:
-    types: [edited]
+    types: [created, edited]
 
 permissions:
   contents: read
@@ -17,6 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Debug - Show comment info
+        uses: actions/github-script@v8
+        with:
+          script: |
+            console.log('=== DEBUG: Comment Event ===');
+            console.log('Action:', context.payload.action);
+            console.log('Comment user:', context.payload.comment.user.login);
+            console.log('Comment ID:', context.payload.comment.id);
+            console.log('Has checkboxes:', context.payload.comment.body.includes('- ['));
+            console.log('=== END DEBUG ===');
+      
       - name: Validate checkbox selection
         id: validate
         uses: actions/github-script@v8
@@ -24,6 +35,16 @@ jobs:
           script: |
             const script = require('./.github/scripts/config/validate-checkbox-selection.js');
             return await script({github, context, core});
+      
+      - name: Debug validation outputs
+        if: always()
+        run: |
+          echo "is_org_comment: ${{ steps.validate.outputs.is_org_comment }}"
+          echo "is_valid: ${{ steps.validate.outputs.is_valid }}"
+          echo "source_instance: ${{ steps.validate.outputs.source_instance }}"
+          echo "source_org: ${{ steps.validate.outputs.source_org }}"
+          echo "target_instance: ${{ steps.validate.outputs.target_instance }}"
+          echo "target_org: ${{ steps.validate.outputs.target_org }}"
 
       - name: Post Step 3 if valid selection
         if: |
