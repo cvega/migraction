@@ -169,11 +169,12 @@ jobs:
       - name: Post Step 4 - Migration Instructions
         if: |
           steps.parse-repos.outputs.repo_count != '' &&
-          steps.parse-repos.outputs.repo_count != '0'
+          steps.parse-repos.outputs.repo_count != '0' &&
+          steps.parse-issue.outputs.jsonString != ''
         uses: actions/github-script@v8
         env:
           REPO_URLS_JSON: ${{ steps.parse-repos.outputs.repo_urls }}
-          VISIBILITY: ${{ fromJSON(steps.parse-issue.outputs.jsonString)._target_repository_visibility }}
+          VISIBILITY: ${{ steps.parse-issue.outputs.jsonString && fromJSON(steps.parse-issue.outputs.jsonString)._target_repository_visibility || 'private' }}
           TARGET_ORG: ${{ steps.extract-orgs.outputs.target_org }}
           SOURCE_ORG: ${{ steps.extract-orgs.outputs.source_org }}
         with:
