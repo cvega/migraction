@@ -8,16 +8,6 @@
 
 An enterprise-grade automation framework for GitHub repository migrations using GEI (GitHub Enterprise Importer). Designed for large-scale migrations with intelligent batching, parallel processing, and comprehensive asset transfer. Supports flexible source/target configurations including GHES-to-GHEC, GHEC-to-GHEC, and EMU migrations with built-in access control, dry-run validation, and production locking capabilities.
 
-**Key Capabilities:**
-- 🎯 **Multi-Instance Support**: Configure multiple GitHub Enterprise Server and Cloud instances
-- 🔐 **Fine-Grained Access Control**: Per-organization user permissions via `instances.json`
-- 📦 **Smart Batching**: Automatically splits migrations into 250-repo batches (configurable)
-- ⚡ **Parallel Processing**: Up to 10 concurrent repository migrations per batch
-- 🔄 **Sequential Batch Execution**: Reliable batch-by-batch processing with progress tracking
-- 💾 **Complete Asset Migration**: Git history, LFS, releases, packages, secrets, variables, environments
-- 🧪 **Safe Testing**: Dry-run mode for validation before production
-- 🔒 **Production Mode**: Automatic source repository locking during migration
-
 ## ✨ Key Features
 
 | Feature | Description |
