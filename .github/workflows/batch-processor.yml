@@ -50,35 +50,10 @@ jobs:
         env:
           SOURCE_INSTANCE: ${{ github.event.client_payload.batch.sourceInstance }}
           TARGET_INSTANCE: ${{ github.event.client_payload.batch.targetInstance }}
-          GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
-          GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
-          GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
         with:
           script: |
-            const fs = require('fs');
-            const config = JSON.parse(fs.readFileSync('.github/scripts/config/instances.json', 'utf8'));
-            
-            const sourceInstance = process.env.SOURCE_INSTANCE;
-            const targetInstance = process.env.TARGET_INSTANCE;
-            
-            const sourceConfig = config.sources[sourceInstance];
-            const targetConfig = config.targets[targetInstance];
-            
-            if (!sourceConfig) throw new Error(`Unknown source instance: ${sourceInstance}`);
-            if (!targetConfig) throw new Error(`Unknown target instance: ${targetInstance}`);
-            
-            const sourceToken = process.env[sourceConfig.tokenSecret];
-            const targetToken = process.env[targetConfig.tokenSecret];
-            
-            if (!sourceToken) throw new Error(`Token ${sourceConfig.tokenSecret} not found`);
-            if (!targetToken) throw new Error(`Token ${targetConfig.tokenSecret} not found`);
-            
-            core.setSecret(sourceToken);
-            core.setSecret(targetToken);
-            core.setOutput('source_token', sourceToken);
-            core.setOutput('target_token', targetToken);
-            
-            console.log('✅ Tokens resolved for GH_SOURCE_PAT and GH_PAT');
+            const resolveTokens = require('./.github/scripts/config/resolve-tokens.js');
+            await resolveTokens({ core });
 
       - name: Extract repository name and path
         id: repo-info

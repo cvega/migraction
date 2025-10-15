@@ -2,7 +2,7 @@ module.exports = async ({ github, context, core }) => {
   const targetOrg = process.env.TARGET_ORG;
   const repoNames = JSON.parse(process.env.REPO_NAMES);
   const isDryRun = process.env.IS_DRY_RUN === 'true';
-  const token = process.env.TARGET_ADMIN_TOKEN;
+  const token = process.env.TARGET_TOKEN;
 
   console.log(`Starting deletion of ${repoNames.length} repositories from ${targetOrg}`);
   console.log(`Repository type: ${isDryRun ? 'dry-run' : 'production'}`);

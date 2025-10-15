@@ -366,7 +366,24 @@ When you add a new instance to `instances.json`:
 
 1. **Create the PAT** for the new instance (Step 1 above)
 2. **Add the secret** to GitHub repository (Step 2 above)
-3. **Update `batch-processor.yml`** to include the new secret in the job environment:
+3. **Update the reusable workflow** that resolves tokens:
+
+   **Critical:** Update `.github/workflows/resolve-tokens-reusable.yml`
+   
+   Add your new token to the `secrets` section and the `env` section:
+   ```yaml
+   secrets:
+     GHEC_CLOUD_TOKEN:
+       required: false
+     GHES_PROD_TOKEN:
+       required: false
+     GHEC_EMU_TOKEN:
+       required: false
+     NEW_INSTANCE_TOKEN:  # ← Add this
+       required: false
+   ```
+   
+   And in the `env` section of the resolve step:
    ```yaml
    env:
      GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
@@ -374,9 +391,25 @@ When you add a new instance to `instances.json`:
      GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
      NEW_INSTANCE_TOKEN: ${{ secrets.NEW_INSTANCE_TOKEN }}  # ← Add this
    ```
-4. **Commit and push** the workflow changes
 
-**Note:** This is the only place where adding a new instance requires a code change. All other configuration is handled through `instances.json`.
+4. **Update batch-processor.yml** job-level env:
+   
+   Since batch-processor uses matrix strategy and can't call reusable workflows, update its job-level `env` section:
+   ```yaml
+   env:
+     # ... other env vars ...
+     GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
+     GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
+     GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
+     NEW_INSTANCE_TOKEN: ${{ secrets.NEW_INSTANCE_TOKEN }}  # ← Add this
+   ```
+
+5. **Commit and push** the workflow changes
+
+**Why two places?** 
+- `resolve-tokens-reusable.yml` is used by `delete.yml` and other simple workflows
+- `batch-processor.yml` can't use reusable workflows due to its matrix strategy, so it needs its own token list
+- Both use the same `resolve-tokens.js` script for consistent token resolution logic
 
 ---
 
