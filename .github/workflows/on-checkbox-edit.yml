@@ -49,8 +49,8 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const script = require('./.github/scripts/config/validate-checkbox-selection.js');
-            return await script({github, context, core});
+            const { validateCheckboxSelection } = require('./.github/scripts/config/validate.js');
+            return await validateCheckboxSelection({github, context, core});
       
       - name: Debug validation outputs
         if: always()

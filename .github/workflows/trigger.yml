@@ -30,8 +30,8 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const script = require('./.github/scripts/config/validate-complete-setup.js');
-            return await script({github, context, core});
+            const { validateCompleteSetup } = require('./.github/scripts/config/validate.js');
+            return await validateCompleteSetup({github, context, core});
       
       - name: Debug - Show validation outputs
         uses: actions/github-script@v8

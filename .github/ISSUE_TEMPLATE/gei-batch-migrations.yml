@@ -69,11 +69,9 @@ body:
         
         - **Private**: Only visible to organization members with access
         - **Internal**: Visible to all members of your enterprise  
-        - **Mirror**: Preserve the original repository's visibility settings
       options:
         - Private
         - Internal
-        - Mirror
       default: 0
     validations:
       required: true

@@ -1,7 +1,5 @@
 # 🛠️ Migration Framework Setup Guide
 
-> **Complete installation and configuration guide for the GitHub Enterprise Migration System**
-
 This guide walks you through setting up the migration framework from initial repository creation to running your first migration.
 
 ---
@@ -21,6 +19,38 @@ This guide walks you through setting up the migration framework from initial rep
 
 ---
 
+## 🚀 Quick Setup Checklist
+
+Before diving into detailed steps, here's the high-level setup process:
+
+```
+1️⃣ Create repository from template
+   └─ Use "Use this template" button on GitHub
+
+2️⃣ Configure instances.json
+   └─ Define your GitHub instances, orgs, and user access
+
+3️⃣ Add GitHub Secrets
+   └─ PAT tokens for each instance + storage credentials
+
+4️⃣ Add GitHub Variables  
+   └─ INSTALL_PREREQS=true, LOCAL_CACHE_DIR=/opt/migration
+
+5️⃣ Set up self-hosted runners
+   └─ Install 11 runners on Ubuntu 24.04 server(s) for full concurrency
+      (1 orchestrator + 10 batch processors)
+
+6️⃣ Configure storage backend
+   └─ Azure Blob Storage OR AWS S3
+
+7️⃣ Validate & test
+   └─ Run validation scripts, test with dry-run migration
+```
+
+**Estimated setup time:** 2-4 hours for first-time setup
+
+---
+
 ## 🎯 Prerequisites
 
 Before starting, ensure you have:
@@ -32,7 +62,7 @@ Before starting, ensure you have:
 - [ ] Ability to create and manage **GitHub Actions runners**
 
 ### Infrastructure
-- [ ] **Linux server(s)** for self-hosted runners (Ubuntu 20.04+ recommended)
+- [ ] **Linux server(s)** for self-hosted runners (Ubuntu 24.04 LTS recommended)
   - Minimum: 1 server with 16 cores, 32GB RAM, 500GB SSD
   - Recommended: 1 server with 32 cores, 64GB RAM, 1TB SSD
 - [ ] **Cloud storage** account (Azure Blob Storage or AWS S3)
@@ -44,7 +74,7 @@ Before starting, ensure you have:
 ### Tools on Your Local Machine
 - [ ] **Git** installed
 - [ ] **GitHub CLI** (`gh`) installed: https://cli.github.com/
-- [ ] **Node.js** (v16+) for validation scripts
+- [ ] **Node.js** (v22+) for validation scripts
 - [ ] **SSH access** to runner server(s)
 - [ ] **Text editor** for configuration files
 
@@ -52,12 +82,30 @@ Before starting, ensure you have:
 
 ## 📦 Repository Setup
 
-### Step 1: Fork or Clone the Repository
+### Step 1: Use as Template Repository
 
-**Option A: Fork the Repository** (Recommended)
+**Using Template (Recommended for Easy Updates)**
+```bash
+# 1. Use this repository as a template via GitHub UI
+#    Go to: https://github.com/cvega/migraction
+#    Click "Use this template" → "Create a new repository"
+#    Select your organization and name it (e.g., "migraction")
+
+# 2. Clone your new repository
+git clone https://github.com/YOUR-ORG/migraction.git
+cd migraction
+
+# 3. Add upstream for receiving framework updates
+git remote add upstream https://github.com/cvega/migraction.git
+git fetch upstream
+```
+
+📘 **Using this as a template?** See [UPDATING.md](UPDATING.md) for how to keep your framework up-to-date with the latest features and fixes.
+
+**Alternative: Fork the Repository**
 ```bash
 # 1. Fork this repository to your organization via GitHub UI
-#    Go to: https://github.com/ORIGINAL-OWNER/migraction
+#    Go to: https://github.com/cvega/migraction
 #    Click "Fork" → Select your organization
 
 # 2. Clone your fork
@@ -65,10 +113,10 @@ git clone https://github.com/YOUR-ORG/migraction.git
 cd migraction
 ```
 
-**Option B: Clone and Push to New Repo**
+**Alternative: Clone and Push to New Repo**
 ```bash
 # 1. Clone the repository
-git clone https://github.com/ORIGINAL-OWNER/migraction.git
+git clone https://github.com/cvega/migraction.git
 cd migraction
 
 # 2. Create new repository in your org via GitHub UI or CLI
@@ -192,7 +240,7 @@ code .github/scripts/config/instances.json
 
 ```bash
 # Run the validation script
-node .github/scripts/config/validate-config.js
+node .github/scripts/config/validate.js
 
 # Expected output:
 # ✓ Configuration file is valid JSON
@@ -251,19 +299,15 @@ Secrets store sensitive tokens that workflows use to authenticate.
 
 **Tokens You Need:**
 
-Based on your `instances.json`, create PATs for:
-- ✅ Each source instance (`tokenSecret` value)
-- ✅ Each target instance (`tokenSecret` value)
-- ✅ `SOURCE_ADMIN_TOKEN` (for feature detection)
-- ✅ `TARGET_ADMIN_TOKEN` (for issue comments and reporting)
+Based on your `instances.json`, create PATs for each instance defined:
+- ✅ Each source instance (`tokenSecret` value from instances.json)
+- ✅ Each target instance (`tokenSecret` value from instances.json)
 
 **Example Token List:**
 ```
 ✅ GHES_PROD_TOKEN        (from GHES instance)
 ✅ GHEC_LEGACY_TOKEN      (from github.com)
 ✅ GHEC_EMU_TOKEN         (from github.com EMU org)
-✅ SOURCE_ADMIN_TOKEN     (can be same as GHES_PROD_TOKEN)
-✅ TARGET_ADMIN_TOKEN     (can be same as GHEC_EMU_TOKEN)
 ```
 
 ### Step 2: Add Secrets to GitHub Repository
@@ -277,13 +321,11 @@ Based on your `instances.json`, create PATs for:
 
 3. **Add each token:**
 
-   | Secret Name | Value | Source |
-   |-------------|-------|--------|
-   | `GHES_PROD_TOKEN` | `ghp_xxxxx...` | From GHES |
-   | `GHEC_LEGACY_TOKEN` | `ghp_xxxxx...` | From github.com |
-   | `GHEC_EMU_TOKEN` | `ghp_xxxxx...` | From github.com EMU |
-   | `SOURCE_ADMIN_TOKEN` | `ghp_xxxxx...` | Source instance admin |
-   | `TARGET_ADMIN_TOKEN` | `ghp_xxxxx...` | Target instance admin |
+   | Secret Name | Value | Purpose |
+   |-------------|-------|---------|
+   | `GHES_PROD_TOKEN` | `ghp_xxxxx...` | Source instance access (from instances.json) |
+   | `GHEC_LEGACY_TOKEN` | `ghp_xxxxx...` | GHEC org access (from instances.json) |
+   | `GHEC_EMU_TOKEN` | `ghp_xxxxx...` | Target EMU access (from instances.json) |
 
 4. **Verify secrets are added:**
    - You should see all secret names listed (values are hidden)
@@ -344,16 +386,21 @@ Click "New repository variable" for each:
 
 ## 🖥️ Set Up Self-Hosted Runners
 
-Self-hosted runners are **required** for batch processing and feature migrations.
+Self-hosted runners are **required** for orchestration, batch processing, and feature migrations.
 
 ### Step 1: Prepare Runner Server
 
 **System Requirements:**
-- **OS**: Ubuntu 20.04 LTS or newer
-- **CPU**: 16-32 cores (for 10 runners)
+- **OS**: Ubuntu 24.04 LTS
+- **CPU**: 16-32 cores (for 11 runners: 1 orchestrator + 10 batch processors)
 - **RAM**: 32-64 GB
 - **Disk**: 500GB-1TB SSD
 - **Network**: High-speed connection to GitHub
+
+**Runner Count for Full Concurrency:** 11 total
+- 1 runner: Orchestrator (batch creation, sequencing)
+- 10 runners: Batch processing (max 10 concurrent migrations)
+- Additional runners: Optional for feature migrations (can share with batch processors)
 
 **Connect to your server:**
 ```bash
@@ -455,12 +502,12 @@ sudo ./svc.sh start
 sudo ./svc.sh status
 ```
 
-**Install Additional Runners (2-10):**
+**Install Additional Runners (2-11):**
 ```bash
 # For each additional runner, repeat with different directory and name
 cd ~
 
-for i in {2..10}; do
+for i in {2..11}; do
   echo "Installing runner $i..."
   
   mkdir -p ~/actions-runner-$i
@@ -505,13 +552,13 @@ https://github.com/YOUR-ORG/migraction/settings/actions/runners
 ✅ gh-migration-runner-2 - Idle (green dot)
 ✅ gh-migration-runner-3 - Idle (green dot)
 ...
-✅ gh-migration-runner-10 - Idle (green dot)
+✅ gh-migration-runner-11 - Idle (green dot)
 ```
 
 **Check on Server:**
 ```bash
 # Check all runner services
-for i in {1..10}; do
+for i in {1..11}; do
   echo "Runner $i:"
   sudo systemctl status actions.runner.YOUR-ORG-migraction.gh-migration-runner-$i.service | grep Active
 done
@@ -659,9 +706,10 @@ If you're migrating repositories with packages, install the relevant package man
 # SSH to runner server
 ssh ubuntu@runner-server
 
-# 1. NPM (Node.js packages)
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+# 1. NPM (Node.js packages) - Node.js 22.x
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
+node --version  # Should show v22.x.x
 npm --version
 
 # 2. NuGet (.NET packages)
@@ -813,7 +861,7 @@ df -h /opt/migration
 
 ```bash
 # On your local machine, in the repo directory
-node .github/scripts/config/validate-config.js
+node .github/scripts/config/validate.js
 ```
 
 **Expected Output:**
@@ -838,8 +886,6 @@ gh secret list --repo YOUR-ORG/migraction
 # GHES_PROD_TOKEN        Updated 2024-01-15
 # GHEC_LEGACY_TOKEN      Updated 2024-01-15
 # GHEC_EMU_TOKEN         Updated 2024-01-15
-# SOURCE_ADMIN_TOKEN     Updated 2024-01-15
-# TARGET_ADMIN_TOKEN     Updated 2024-01-15
 # AZURE_STORAGE_CONNECTION_STRING  Updated 2024-01-15
 ```
 
