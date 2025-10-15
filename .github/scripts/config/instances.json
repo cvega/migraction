@@ -30,7 +30,7 @@
       "hostname": "github.com",
       "tokenSecret": "GHEC_EMU_TOKEN",
       "orgs": {
-        "migration-demo-emu": {
+        "migraction-demo": {
           "allowedUsers": ["cvega", "migration-team"]
         }
       }
