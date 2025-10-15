@@ -7,6 +7,14 @@ on:
         description: 'Repository to migrate environments from'
         required: true
         type: string
+      source_token:
+        description: 'Source instance token (masked)'
+        required: true
+        type: string
+      target_token:
+        description: 'Target instance token (masked)'
+        required: true
+        type: string
       issue_number:
         description: 'Issue number for reporting'
         required: true
@@ -79,7 +87,7 @@ jobs:
             --file "$CSV_FILE" \
             --organization ${{ vars.TARGET_ORGANIZATION }} \
             --repository ${{ steps.repo-info.outputs.name }} \
-            --token ${{ secrets.TARGET_ADMIN_TOKEN }}
+            --token ${{ inputs.target_token }}
           
           SYNC_EXIT_CODE=$?
           
@@ -94,7 +102,7 @@ jobs:
           echo "No CSV file found to sync"
         fi
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
     
     - name: Report environments migration completion
       if: ${{ always() && inputs.issue_number != '' }}

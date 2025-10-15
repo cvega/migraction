@@ -7,6 +7,14 @@ on:
         description: 'Repository to migrate releases from'
         required: true
         type: string
+      source_token:
+        description: 'Source instance token (masked)'
+        required: true
+        type: string
+      target_token:
+        description: 'Target instance token (masked)'
+        required: true
+        type: string
       issue_number:
         description: 'Issue number for reporting'
         required: true
@@ -60,7 +68,7 @@ jobs:
     - name: Install gh migrate-releases extension
       run: gh extension install mona-actions/gh-migrate-releases
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
 
     - name: Migrate releases to target repository
       id: migrate
@@ -71,9 +79,9 @@ jobs:
         gh migrate-releases sync \
           --repository ${{ inputs.repo }} \
           --source-organization ${{ vars.SOURCE_ORGANIZATION }} \
-          --source-token ${{ secrets.SOURCE_ADMIN_TOKEN }} \
+          --source-token ${{ inputs.source_token }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
-          --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
+          --target-token ${{ inputs.target_token }}
         
         # Capture exit code
         MIGRATION_EXIT_CODE=$?
@@ -88,7 +96,7 @@ jobs:
         
         exit $MIGRATION_EXIT_CODE
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
     
     - name: Report releases migration completion
       if: ${{ always() && inputs.issue_number != '' }}

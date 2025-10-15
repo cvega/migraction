@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 
 function checkLFS() {
     // Get command from arguments (check or extract)
@@ -10,6 +11,13 @@ function checkLFS() {
 
     if (!targetURL) {
         console.error('Error: CLONE_URL environment variable is required');
+        console.log('found=false');
+        process.exit(1);
+    }
+
+    // Check if CSV file exists
+    if (!fs.existsSync(csvPath)) {
+        console.error(`Error: CSV file not found at ${csvPath}`);
         console.log('found=false');
         process.exit(1);
     }

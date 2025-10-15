@@ -310,7 +310,7 @@ Check migrated environments at: `https://github.com/TARGET_ORG/REPO/settings/env
 
 **LFS Migration:**
 - Detected automatically via `.gitattributes` file
-- Optional: Pre-populate `lfs.csv` for tracking
+- Optional: Pre-populate `${LOCAL_CACHE_DIR}/${ORG}_lfs.csv` for tracking
 - Uses `gh-migrate-lfs` tool
 
 **Packages Migration:**

@@ -7,6 +7,14 @@ on:
         description: 'Repo to migrate packages'
         required: true
         type: string
+      source_token:
+        description: 'Source instance token (masked)'
+        required: true
+        type: string
+      target_token:
+        description: 'Target instance token (masked)'
+        required: true
+        type: string
       issue_number:
         description: 'Issue number for reporting'
         required: true
@@ -61,7 +69,7 @@ jobs:
     - name: Install gh migrate-packages extension
       run: gh extension install mona-actions/gh-migrate-packages
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
 
     - name: Migrate packages to target repository
       id: migrate
@@ -71,11 +79,11 @@ jobs:
           --repository ${{ steps.repo-info.outputs.name }} \
           --source-organization ${{ vars.SOURCE_ORGANIZATION }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
-          --target-token ${{ secrets.TARGET_ADMIN_TOKEN }}
+          --target-token ${{ inputs.target_token }}
         
         echo "packages_status=success" >> $GITHUB_OUTPUT
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
         LOCAL_CACHE_DIR: ${{ vars.LOCAL_CACHE_DIR || '/opt/migration' }}
     
     - name: Report packages migration completion

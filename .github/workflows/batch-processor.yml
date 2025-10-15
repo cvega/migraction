@@ -130,7 +130,7 @@ jobs:
           LOCAL_CACHE_DIR: ${{ vars.LOCAL_CACHE_DIR || '/opt/migration' }}                           
         run: |
           # Check and collect secrets
-          SECRETS_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh secret list \
+          SECRETS_JSON=$(GH_TOKEN="${{ steps.resolve-tokens.outputs.source_token }}" gh secret list \
             --repo "${{ steps.repo-info.outputs.path }}" \
             --json name,updatedAt 2>/dev/null || echo "[]")
 
@@ -144,7 +144,7 @@ jobs:
           fi
 
           # Check and collect variables
-          VARIABLES_JSON=$(GH_TOKEN="${{ secrets.SOURCE_ADMIN_TOKEN }}" gh variable list \
+          VARIABLES_JSON=$(GH_TOKEN="${{ steps.resolve-tokens.outputs.source_token }}" gh variable list \
             --repo "${{ steps.repo-info.outputs.path }}" \
             --json name,value 2>/dev/null || echo "[]")
 
@@ -158,7 +158,7 @@ jobs:
           fi
 
           # Check LFS
-          if CLONE_URL="${{ matrix.repository }}.git" LFS_CSV_PATH="lfs.csv" node .github/scripts/filters/lfs.js check | grep -q "found=true"; then
+          if CLONE_URL="${{ matrix.repository }}.git" LFS_CSV_PATH="$LOCAL_CACHE_DIR/${{ env.SOURCE_ORG }}_lfs.csv" node .github/scripts/filters/lfs.js check | grep -q "found=true"; then
             echo "lfs=true" >> $GITHUB_OUTPUT
           else
             echo "lfs=false" >> $GITHUB_OUTPUT
@@ -191,11 +191,13 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: variables-secrets.yml
-          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          token: ${{ steps.resolve-tokens.outputs.target_token }}
           inputs: |
             {
               "repository": "${{ matrix.repository }}",
               "target_repo": "${{ env.TARGET_ORG }}/${{ steps.repo-info.outputs.name }}",
+              "source_token": "${{ steps.resolve-tokens.outputs.source_token }}",
+              "target_token": "${{ steps.resolve-tokens.outputs.target_token }}",
               "variables_data": "${{ steps.migration-checks.outputs.variables_data }}",
               "secrets_data": "${{ steps.migration-checks.outputs.secrets_data }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
@@ -207,10 +209,13 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: lfs.yml
-          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          token: ${{ steps.resolve-tokens.outputs.target_token }}
           inputs: |
             {
               "repository": "${{ matrix.repository }}",
+              "source_org": "${{ env.SOURCE_ORG }}",
+              "source_token": "${{ steps.resolve-tokens.outputs.source_token }}",
+              "target_token": "${{ steps.resolve-tokens.outputs.target_token }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
               "batch_number": "${{ env.BATCH_NUMBER }}"
             }
@@ -220,10 +225,12 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: packages.yml
-          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          token: ${{ steps.resolve-tokens.outputs.target_token }}
           inputs: |
             {
               "repository": "${{ matrix.repository }}",
+              "source_token": "${{ steps.resolve-tokens.outputs.source_token }}",
+              "target_token": "${{ steps.resolve-tokens.outputs.target_token }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
               "batch_number": "${{ env.BATCH_NUMBER }}"
             }
@@ -233,10 +240,12 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: releases.yml
-          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          token: ${{ steps.resolve-tokens.outputs.target_token }}
           inputs: |
             {
               "repo": "${{ steps.repo-info.outputs.path }}",
+              "source_token": "${{ steps.resolve-tokens.outputs.source_token }}",
+              "target_token": "${{ steps.resolve-tokens.outputs.target_token }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
               "batch_number": "${{ env.BATCH_NUMBER }}"
             }
@@ -246,10 +255,12 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: environments.yml
-          token: ${{ secrets.TARGET_ADMIN_TOKEN }}
+          token: ${{ steps.resolve-tokens.outputs.target_token }}
           inputs: |
             {
               "repository": "${{ matrix.repository }}",
+              "source_token": "${{ steps.resolve-tokens.outputs.source_token }}",
+              "target_token": "${{ steps.resolve-tokens.outputs.target_token }}",
               "issue_number": "${{ github.event.client_payload.batch.issueNumber }}",
               "batch_number": "${{ env.BATCH_NUMBER }}",
               "file_name": "${{ vars.LOCAL_CACHE_DIR }}/${{ env.SOURCE_ORG }}_environments.csv"
@@ -262,7 +273,7 @@ jobs:
           gei reclaim-mannequin \
             --csv user-mappings-gei.csv \
             --github-target-org ${{ env.TARGET_ORG }} \
-            --github-target-pat ${{ secrets.TARGET_ADMIN_TOKEN }}
+            --github-target-pat ${{ steps.resolve-tokens.outputs.target_token }}
 
       - name: Save repository migration result
         if: always()

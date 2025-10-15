@@ -7,6 +7,18 @@ on:
         description: 'Repo to LFS migrate'
         required: true
         type: string
+      source_org:
+        description: 'Source organization name'
+        required: true
+        type: string
+      source_token:
+        description: 'Source instance token (masked)'
+        required: true
+        type: string
+      target_token:
+        description: 'Target instance token (masked)'
+        required: true
+        type: string
       issue_number:
         description: 'Issue number for reporting'
         required: true
@@ -60,13 +72,14 @@ jobs:
     - name: Install gh migrate-lfs extension
       run: gh extension install mona-actions/gh-migrate-lfs
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
 
     - name: Prepare LFS migration
       id: prepare
       env:
         CLONE_URL: ${{ inputs.repository }}.git
-        LFS_CSV_PATH: lfs.csv
+        LFS_CSV_PATH: ${{ vars.LOCAL_CACHE_DIR || '/opt/migration' }}/${{ inputs.source_org }}_lfs.csv
+        LOCAL_CACHE_DIR: ${{ vars.LOCAL_CACHE_DIR || '/opt/migration' }}
       run: |
           node .github/scripts/filters/lfs.js extract 
           REPO_NAME=$(basename "${{ inputs.repository }}")
@@ -78,12 +91,12 @@ jobs:
         gh migrate-lfs sync \
           --file ${{ steps.prepare.outputs.csv_file }} \
           --target-organization ${{ vars.TARGET_ORGANIZATION }} \
-          --target-token ${{ secrets.TARGET_ADMIN_TOKEN }} \
+          --target-token ${{ inputs.target_token }} \
           --work-dir ${{ vars.LOCAL_CACHE_DIR }}/lfs
         
         echo "lfs_status=success" >> $GITHUB_OUTPUT
       env:
-        GH_TOKEN: ${{ secrets.TARGET_ADMIN_TOKEN }}
+        GH_TOKEN: ${{ inputs.target_token }}
     
     - name: Report LFS migration completion
       if: ${{ always() && inputs.issue_number != '' }}
