@@ -108,21 +108,21 @@ The migration system uses a three-tier runner architecture:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Tier 1: Orchestration (GitHub-hosted)             │
+│  Tier 1: Orchestration (GitHub-hosted)              │
 │  ├─ Creates batches                                 │
 │  ├─ Dispatches workflows                            │
 │  └─ Posts progress updates                          │
 └─────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────┐
-│  Tier 2: Batch Processing (Self-hosted)            │
+│  Tier 2: Batch Processing (Self-hosted)             │
 │  ├─ Runs GEI migrations (10 parallel)               │
 │  ├─ Detects features (LFS, packages, etc.)          │
 │  └─ Triggers feature migrations                     │
 └─────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────┐
-│  Tier 3: Feature Migrations (Self-hosted)          │
+│  Tier 3: Feature Migrations (Self-hosted)           │
 │  ├─ LFS data transfer                               │
 │  ├─ Packages migration                              │
 │  ├─ Releases migration                              │
@@ -623,12 +623,12 @@ gh api /orgs/YOUR-ORG --hostname ghes.company.com
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  End Users (Self-Service Interface)                        │
-│  ├─ Create migration issue via GitHub UI                   │
-│  ├─ Select source/target organizations (filtered by access)│
-│  ├─ Provide repository URLs to migrate                     │
-│  ├─ Execute migrations with simple commands                │
-│  └─ Monitor progress in real-time                          │
+│  End Users (Self-Service Interface)                         │
+│  ├─ Create migration issue via GitHub UI                    │
+│  ├─ Select source/target organizations (filtered by access) │
+│  ├─ Provide repository URLs to migrate                      │
+│  ├─ Execute migrations with simple commands                 │
+│  └─ Monitor progress in real-time                           │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -636,7 +636,7 @@ gh api /orgs/YOUR-ORG --hostname ghes.company.com
 │  ├─ Filters organizations by user permissions               │
 │  ├─ Validates source/target configuration                   │
 │  ├─ Ensures repos match selected organization               │
-│  └─ Enforces role-based access control                     │
+│  └─ Enforces role-based access control                      │
 └─────────────────────────────────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -666,8 +666,8 @@ gh api /orgs/YOUR-ORG --hostname ghes.company.com
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  Reporting & Completion                                     │
-│  ├─ Batch status updates posted to issue                   │
-│  ├─ Feature migration reports                              │
+│  ├─ Batch status updates posted to issue                    │
+│  ├─ Feature migration reports                               │
 │  ├─ Final summary with statistics                           │
 │  └─ Next steps and post-migration checklist                 │
 └─────────────────────────────────────────────────────────────┘

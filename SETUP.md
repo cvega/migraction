@@ -312,6 +312,8 @@ Based on your `instances.json`, create PATs for each instance defined:
 
 ### Step 2: Add Secrets to GitHub Repository
 
+**Important:** These secrets are accessed by the `batch-processor.yml` workflow, which dynamically resolves tokens based on your `instances.json` configuration.
+
 1. **Navigate to repository settings:**
    ```
    https://github.com/YOUR-ORG/migraction/settings/secrets/actions
@@ -327,9 +329,17 @@ Based on your `instances.json`, create PATs for each instance defined:
    | `GHEC_LEGACY_TOKEN` | `ghp_xxxxx...` | GHEC org access (from instances.json) |
    | `GHEC_EMU_TOKEN` | `ghp_xxxxx...` | Target EMU access (from instances.json) |
 
+   **✅ Critical:** Secret names must match **exactly** with the `tokenSecret` values in your `instances.json` configuration.
+
 4. **Verify secrets are added:**
    - You should see all secret names listed (values are hidden)
    - Names must match exactly with `tokenSecret` in `instances.json`
+
+**How It Works:**
+- The `batch-processor.yml` workflow reads these secrets at the job level
+- Token resolution happens once in `batch-processor.yml` 
+- Resolved tokens are passed to feature workflows (LFS, releases, packages, etc.)
+- Feature workflows never directly access these secrets
 
 ### Step 3: Test Token Permissions
 
@@ -349,6 +359,24 @@ gh api /orgs/acme-emu
 
 # If any fail, recreate the token with correct scopes
 ```
+
+### Adding New Instances
+
+When you add a new instance to `instances.json`:
+
+1. **Create the PAT** for the new instance (Step 1 above)
+2. **Add the secret** to GitHub repository (Step 2 above)
+3. **Update `batch-processor.yml`** to include the new secret in the job environment:
+   ```yaml
+   env:
+     GHEC_CLOUD_TOKEN: ${{ secrets.GHEC_CLOUD_TOKEN }}
+     GHES_PROD_TOKEN: ${{ secrets.GHES_PROD_TOKEN }}
+     GHEC_EMU_TOKEN: ${{ secrets.GHEC_EMU_TOKEN }}
+     NEW_INSTANCE_TOKEN: ${{ secrets.NEW_INSTANCE_TOKEN }}  # ← Add this
+   ```
+4. **Commit and push** the workflow changes
+
+**Note:** This is the only place where adding a new instance requires a code change. All other configuration is handled through `instances.json`.
 
 ---
 
